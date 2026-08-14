@@ -7,7 +7,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Interfaces matching your DB schema
 interface LibraryItem {
   id?: number;
   rawg_id: string;

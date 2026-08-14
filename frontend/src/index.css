@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+/* Theme definitions for Tailwind CSS v4 */
+@theme {
+  --color-paper: #EDE6D6;
+  --color-ink: #1B1B1F;
+  --color-stub: #C1432E;
+  --color-tag: #E8B84B;
+  --color-teal: #2B6E6E;
+
+  --font-display: "Bebas Neue", cursive;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-body: "IBM Plex Sans", sans-serif;
+}
+
+@layer base {
+  :root {
+    --bg-paper: #EDE6D6;
+    --text-ink: #1B1B1F;
+    --border-color: rgba(27, 27, 31, 0.15);
+  }
+
+  body {
+    background-color: var(--bg-paper);
+    color: var(--text-ink);
+    font-family: var(--font-body);
+    background-image: radial-gradient(var(--text-ink) 0.5px, transparent 0.5px), radial-gradient(var(--text-ink) 0.5px, var(--bg-paper) 0.5px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+    min-height: 100vh;
+  }
+}
+
+.shelf-edge {
+  border-bottom: 2px dashed rgba(237, 230, 214, 0.2);
+  box-shadow: 0 4px 0 0 var(--border-color);
+}
+
+.card-spine {
+  box-shadow: -4px 0 0 0 var(--spine-color, #8B7355), 4px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes pulse-bg {
+  0%, 100% { background-color: rgba(27, 27, 31, 0.08); }
+  50% { background-color: rgba(27, 27, 31, 0.18); }
+}
+.skeleton { animation: pulse-bg 1.5s ease-in-out infinite; }
+
+@keyframes caseOpen {
+  from { opacity: 0; transform: rotateY(-20deg) scale(0.95); }
+  to { opacity: 1; transform: rotateY(0deg) scale(1); }
+}
+.case-open {
+  animation: caseOpen 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: left center;
+}
+
+.fade-in { animation: fadeIn 0.25s ease-out forwards; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
