@@ -22,7 +22,12 @@ const filteredLibrary = computed(() => {
   if (sortBy.value === 'rating_desc') {
     list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   } else {
-    list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    // Assuming created_at exists on your backend item, otherwise fallback to id sort
+    list.sort((a, b) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
+      return timeB - timeA;
+    });
   }
 
   return list;
@@ -65,13 +70,13 @@ const filteredLibrary = computed(() => {
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       <GameCard 
         v-for="item in filteredLibrary" 
-        :key="item.id || item.rawg_id" 
-        :rawg-id="item.rawg_id" 
+        :key="item.id || item.steam_id" 
+        :steam-id="item.steam_id" 
         :name="item.name" 
         :image="item.background_image"
         :status-chip="item.status"
         :rating-chip="item.rating ? `★ ${item.rating}` : null"
-        @click="emit('openModal', item.rawg_id)" 
+        @click="emit('openModal', $event)" 
       />
     </div>
   </section>
