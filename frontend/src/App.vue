@@ -6,7 +6,7 @@ import type { LibraryItem } from './types/game';
 import { fetchLibrary } from './api';
 
 const library = ref<LibraryItem[]>([]);
-const activeModalId = ref<number | string | null>(null);
+const activeModalId = ref<number | null>(null);
 const activeModalEntry = ref<LibraryItem | null>(null);
 
 const toastMessage = ref('');
@@ -20,13 +20,16 @@ async function loadLibraryData() {
   }
 }
 
-function openGameModal(rawgId: number | string) {
-  activeModalId.value = rawgId;
-  activeModalEntry.value = library.value.find(i => String(i.rawg_id) === String(rawgId)) || null;
+function openGameModal(steamId: number | string) {
+  const idNum = Number(steamId);
+  if (!steamId || Number.isNaN(idNum)) return; // Prevents triggering modal with invalid IDs
+  
+  activeModalId.value = idNum;
+  activeModalEntry.value = library.value.find(i => Number(i.steam_id) === idNum) || null;
 }
 
 function handleSaved(savedItem: LibraryItem) {
-  const index = library.value.findIndex(i => String(i.rawg_id) === String(savedItem.rawg_id));
+  const index = library.value.findIndex(i => Number(i.steam_id) === Number(savedItem.steam_id));
   if (index !== -1) {
     library.value[index] = savedItem;
   } else {
@@ -58,15 +61,14 @@ onMounted(loadLibraryData);
       />
     </main>
 
+    <!-- Updated to pass steam-id prop -->
     <GameModal 
-      :rawg-id="activeModalId" 
+      :steam-id="activeModalId" 
       :existing-entry="activeModalEntry"
       @close="activeModalId = null"
       @saved="handleSaved"
       @deleted="handleDeleted"
       @toast="triggerToast"
     />
-
-    <Toast :message="toastMessage" :is-error="toastIsError" />
   </div>
 </template>

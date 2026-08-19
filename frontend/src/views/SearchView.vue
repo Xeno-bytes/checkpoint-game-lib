@@ -1,46 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type { RAWGGame, Genre } from '../types/game'
-import { fetchRawg } from '../api'
+import { ref } from 'vue'
+import type { SteamGame } from '../types/game'
+import { searchGames } from '../api'
 import GameCard from '../components/GameCard.vue'
 
 const emit = defineEmits<{(e: 'openModal', id: number): void}>()
 
 const searchQuery = ref('')
-const selectedGenre = ref('')
-const genres = ref<Genre[]>([])
-const searchResults = ref<RAWGGame[]>([])
+const searchResults = ref<SteamGame[]>([])
 const loading = ref(false)
 const searched = ref(false)
 
-// Fetch genres on load for the dropdown filter
-onMounted(async () => {
-  try {
-    const data = await fetchRawg<{ results: Genre[] }>('/genres')
-    genres.value = data.results
-  } catch (err) {
-    console.error('Failed to fetch genres:', err)
-  }
-})
-
 async function handleSearch() {
-  if (!searchQuery.value.trim() && !selectedGenre.value) return
+  if (!searchQuery.value.trim()) return
 
   loading.value = true
   searched.value = true
   try {
-    const params: Record<string, any> = {
-      search: searchQuery.value.trim(),
-      page_size: 20,
-    }
-    if (selectedGenre.value) {
-      params.genres = selectedGenre.value
-    }
-
-    const data = await fetchRawg<{ results: RAWGGame[] }>('/games', params)
-    searchResults.value = data.results
+    searchResults.value = await searchGames(searchQuery.value.trim())
   } catch (err) {
     console.error('Search failed:', err)
+    searchResults.value = []
   } finally {
     loading.value = false
   }
@@ -51,7 +31,7 @@ async function handleSearch() {
   <section class="fade-in">
     <div class="mb-6">
       <h1 class="font-display text-5xl tracking-wide">Search Catalog</h1>
-      <p class="font-mono text-sm text-ink/60 mt-1">Look up games by title or filter by genre.</p>
+      <p class="font-mono text-sm text-ink/60 mt-1">Look up games directly on Steam.</p>
     </div>
 
     <!-- Search Controls -->
@@ -59,19 +39,9 @@ async function handleSearch() {
       <input 
         v-model="searchQuery"
         type="text" 
-        placeholder="Type a game title (e.g. Elden Ring, Zelda)..." 
+        placeholder="Type a game title (e.g. Elden Ring, Portal)..." 
         class="flex-1 bg-white border border-ink/20 rounded-sm px-4 py-3 font-body text-sm focus:outline-none focus:border-ink transition-colors"
       />
-
-      <select 
-        v-model="selectedGenre" 
-        class="bg-white border border-ink/20 rounded-sm px-4 py-3 font-mono text-xs uppercase focus:outline-none focus:border-ink"
-      >
-        <option value="">All Genres</option>
-        <option v-for="genre in genres" :key="genre.id" :value="genre.slug">
-          {{ genre.name }}
-        </option>
-      </select>
 
       <button 
         type="submit" 
@@ -84,7 +54,7 @@ async function handleSearch() {
     <!-- Loading State -->
     <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       <div v-for="i in 10" :key="i" class="space-y-2">
-        <div class="skeleton aspect-[3/4] w-full rounded-sm"></div>
+        <div class="skeleton aspect-3/4 w-full rounded-sm"></div>
         <div class="skeleton h-4 w-3/4 rounded-sm"></div>
       </div>
     </div>
@@ -94,17 +64,16 @@ async function handleSearch() {
       <GameCard 
         v-for="game in searchResults" 
         :key="game.id" 
-        :rawg-id="game.id" 
+        :steam-id="game.id" 
         :name="game.name" 
-        :image="game.background_image"
-        :rating-chip="game.rating ? `★ ${game.rating.toFixed(1)}` : null"
-        @click="emit('openModal', game.id)" 
+        :image="game.tiny_image"
+        @click="emit('openModal', $event)" 
       />
     </div>
 
     <!-- No Results Empty State -->
     <div v-else-if="searched" class="text-center py-16 text-ink/50 font-mono text-sm">
-      No games found. Try adjusting your search query or filters.
+      No games found. Try adjusting your search query.
     </div>
   </section>
 </template>

@@ -1,28 +1,27 @@
-export interface RAWGGame {
+export interface SteamGame {
   id: number;
   name: string;
-  background_image?: string;
-  rating?: number;
-  released?: string;
-  metacritic?: number;
-  genres?: { id: number; name: string }[];
-  platforms?: { platform: { id: number; name: string } }[];
-  description_raw?: string;
+  tiny_image?: string;
+  header_image?: string;
 }
 
 export interface LibraryItem {
   id?: number;
-  rawg_id: number | string;
+  steam_id: number;
   name: string;
-  background_image?: string;
+  background_image: string;
   status: 'Backlog' | 'In Progress' | 'Completed';
   rating: number;
-  notes?: string;
+  notes: string;
   created_at?: string;
 }
 
-export interface Genre {
+export interface GameDetails {
   id: number;
-  name: string;
-  slug: string;
+  title: string;
+  icon: string;
+  shortDescription: string;
+  synopsis: string;
+  releaseDate: string;
+  genres: string[];
 }

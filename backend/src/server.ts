@@ -1,77 +1,68 @@
-import express, { type Request, type Response } from 'express';import cors from 'cors';
-import { pool } from './db.js';
+import express from 'express';
+import cors from 'cors';
+import { searchSteamGames, fetchGameDetails, fetchFeaturedGames } from './steam.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 
-interface LibraryItem {
-  id?: number;
-  rawg_id: string;
-  name: string;
-  background_image?: string;
-  status?: string;
-  rating?: number;
-  notes?: string;
-}
+let libraryStore: any[] = [];
 
-// GET: Fetch all items
-app.get('/api/library', async (req: Request, res: Response) => {
+// 1. Library Routes
+app.get('/api/library', (req, res) => {
+  res.json(libraryStore);
+});
+
+app.post('/api/library', (req, res) => {
+  const item = req.body;
+  const index = libraryStore.findIndex(i => Number(i.steam_id) === Number(item.steam_id));
+  if (index !== -1) {
+    libraryStore[index] = item;
+  } else {
+    libraryStore.push({ ...item, id: Date.now() });
+  }
+  res.json(item);
+});
+
+app.delete('/api/library/:id', (req, res) => {
+  const id = Number(req.params.id);
+  libraryStore = libraryStore.filter(i => i.id !== id);
+  res.json({ success: true });
+});
+
+// 2. Specific Game Routes 
+app.get('/api/games/featured', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM library ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    const featured = await fetchFeaturedGames();
+    res.json(featured);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch featured games' });
   }
 });
 
-// POST: Add new game
-app.post('/api/library', async (req: Request, res: Response) => {
-  const { rawg_id, name, background_image, status, rating, notes }: LibraryItem = req.body;
-  try {
-    const result = await pool.query(
-      `INSERT INTO library (rawg_id, name, background_image, status, rating, notes)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [rawg_id, name, background_image, status || 'Backlog', rating || 0, notes || '']
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+app.get('/api/games/search', async (req, res) => {
+  const query = (req.query.q as string) || '';
+  const results = await searchSteamGames(query);
+  res.json(results);
 });
 
-// PATCH: Update game rating/status/notes
-app.patch('/api/library/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { status, rating, notes }: Partial<LibraryItem> = req.body;
-  try {
-    const result = await pool.query(
-      `UPDATE library 
-       SET status = COALESCE($1, status),
-           rating = COALESCE($2, rating),
-           notes = COALESCE($3, notes)
-       WHERE id = $4 RETURNING *`,
-      [status, rating, notes, id]
-    );
-    res.json(result.rows[0]);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+// 3. Dynamic Parameter Route
+app.get('/api/games/:id', async (req, res) => {
+  const appId = Number(req.params.id);
+
+  if (Number.isNaN(appId) || appId <= 0) {
+    return res.status(400).json({ error: 'Invalid or missing Steam App ID' });
   }
+
+  const details = await fetchGameDetails(appId);
+  if (!details) {
+    return res.status(404).json({ error: 'Game not found' });
+  }
+
+  res.json(details);
 });
 
-// DELETE: Remove game
-app.delete('/api/library/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    await pool.query('DELETE FROM library WHERE id = $1', [id]);
-    res.status(204).send();
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Express server running on http://localhost:${PORT}`);
+  console.log(`Backend server running on port ${PORT}`);
 });

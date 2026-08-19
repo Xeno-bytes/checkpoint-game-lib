@@ -4,5 +4,22 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), tailwindcss(),],
+  plugins: [
+    vue(),
+    tailwindcss(),
+  ],
+  server: {
+    proxy: {
+      '/steam-api': {
+        target: 'https://store.steampowered.com/api',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/steam-api/, ''),
+      },
+      '/steam-store': {
+        target: 'https://store.steampowered.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/steam-store/, ''),
+      },
+    },
+  },
 })
