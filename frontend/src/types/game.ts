@@ -10,9 +10,10 @@ export interface LibraryItem {
   steam_id: number;
   name: string;
   background_image: string;
-  status: 'Backlog' | 'In Progress' | 'Completed';
-  rating: number;
-  notes: string;
+  status: 'Backlog' | 'In Progress' | 'On Hold' | 'Completed';
+  rating?: number;
+  hoursPlayed?: number | null;
+  notes?: string;
   created_at?: string;
 }
 

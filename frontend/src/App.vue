@@ -11,6 +11,7 @@ const activeModalEntry = ref<LibraryItem | null>(null);
 
 const toastMessage = ref('');
 const toastIsError = ref(false);
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function loadLibraryData() {
   try {
@@ -45,13 +46,18 @@ function handleDeleted(id: number) {
 function triggerToast(msg: string, isError = false) {
   toastMessage.value = msg;
   toastIsError.value = isError;
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastMessage.value = '';
+  }, 3000);
 }
 
 onMounted(loadLibraryData);
 </script>
 
 <template>
-  <div id="app" class="font-body text-ink min-h-screen">
+  <div id="app" class="font-body text-ink min-h-screen relative">
     <Header />
 
     <main class="max-w-6xl mx-auto px-5 py-8">
@@ -61,7 +67,7 @@ onMounted(loadLibraryData);
       />
     </main>
 
-    <!-- Updated to pass steam-id prop -->
+    <!-- Game Modal -->
     <GameModal 
       :steam-id="activeModalId" 
       :existing-entry="activeModalEntry"
@@ -70,5 +76,35 @@ onMounted(loadLibraryData);
       @deleted="handleDeleted"
       @toast="triggerToast"
     />
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div 
+        v-if="toastMessage" 
+        :class="[
+          'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-sm shadow-xl font-mono text-xs uppercase tracking-wider flex items-center gap-2 border',
+          toastIsError 
+            ? 'bg-red-950 text-red-200 border-red-800' 
+            : 'bg-ink text-paper border-paper/20'
+        ]"
+      >
+        <span :class="toastIsError ? 'text-red-400' : 'text-amber-400'">
+          {{ toastIsError ? '✕' : '✓' }}
+        </span>
+        <span>{{ toastMessage }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.25s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+</style>
