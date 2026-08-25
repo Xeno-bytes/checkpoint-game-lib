@@ -38,12 +38,21 @@ watch(() => props.steamId, async (newId) => {
     return;
   }
   
-  status.value = (props.existingEntry?.status as any) || 'Backlog';
-  rating.value = props.existingEntry?.rating || 0;
-  hoursPlayed.value = (props.existingEntry as any)?.hoursPlayed || null;
-  review.value = props.existingEntry?.notes || '';
+  if (props.existingEntry && props.existingEntry.status) {
+    status.value = props.existingEntry.status;
+    rating.value = props.existingEntry.rating || 0;
+    hoursPlayed.value = props.existingEntry.hoursPlayed || null;
+    review.value = props.existingEntry.notes || '';
+    isEditingReview.value = !props.existingEntry.notes;
+  } else {
+    status.value = 'Backlog';
+    rating.value = 0;
+    hoursPlayed.value = null;
+    review.value = '';
+    isEditingReview.value = true;
+  }
+
   formError.value = '';
-  isEditingReview.value = !props.existingEntry?.notes;
 
   loading.value = true;
   try {
@@ -93,40 +102,45 @@ async function handleSave() {
 </script>
 
 <template>
-  <div v-if="steamId" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="case-open bg-paper w-full max-w-4xl max-h-[88vh] rounded-sm shadow-2xl overflow-hidden relative grid grid-cols-1 md:grid-cols-2">
-      <button @click="emit('close')" class="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-ink text-paper font-mono text-sm hover:bg-stub transition-colors">✕</button>
+  <div v-if="steamId" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6">
+    <div class="case-open bg-paper w-full max-w-4xl max-h-[90vh] md:max-h-[85vh] rounded-sm shadow-2xl overflow-hidden relative grid grid-cols-1 md:grid-cols-2">
+      <button 
+        @click="emit('close')" 
+        class="absolute top-3 right-3 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-ink text-paper font-mono text-xs sm:text-sm hover:bg-stub transition-colors shadow-md flex items-center justify-center"
+      >
+        ✕
+      </button>
 
       <!-- LEFT: Game Details -->
-      <div class="overflow-y-auto max-h-[88vh] border-b md:border-b-0 md:border-r border-dashed border-ink/20 flex flex-col justify-between">
-        <div v-if="loading" class="p-5 space-y-3">
+      <div class="overflow-y-auto max-h-[40vh] md:max-h-[85vh] border-b md:border-b-0 md:border-r border-dashed border-ink/20 flex flex-col justify-between">
+        <div v-if="loading" class="p-4 sm:p-5 space-y-3">
           <div class="skeleton w-full aspect-video"></div>
           <div class="skeleton h-4 w-3/4 rounded-sm"></div>
         </div>
         <div v-else-if="game" class="p-0 flex-1 flex flex-col">
           <img :src="game.icon" :alt="game.title" class="w-full aspect-video object-cover" />
-          <div class="p-5 space-y-4 flex-1">
+          <div class="p-4 sm:p-5 space-y-3 sm:space-y-4 flex-1">
             <div class="flex flex-wrap gap-2 font-mono text-[10px] uppercase">
               <span class="bg-ink/10 px-2 py-1 rounded-sm">{{ game.releaseDate }}</span>
             </div>
 
             <!-- Genres -->
             <div>
-              <p class="font-mono text-[11px] uppercase text-ink/40 mb-1.5">Genres</p>
+              <p class="font-mono text-[10px] sm:text-[11px] uppercase text-ink/40 mb-1">Genres</p>
               <div v-if="game.genres && game.genres.length > 0" class="flex flex-wrap gap-1.5">
                 <GenreTag v-for="genre in game.genres" :key="genre" :genre="genre" />
               </div>
-              <p v-else class="text-sm text-ink/40 font-mono">—</p>
+              <p v-else class="text-xs sm:text-sm text-ink/40 font-mono">—</p>
             </div>
 
             <div>
-              <p class="font-mono text-[11px] uppercase text-ink/40 mb-0.5">About</p>
-              <p class="text-sm text-ink/80 leading-relaxed">{{ game.shortDescription || 'No description available.' }}</p>
+              <p class="font-mono text-[10px] sm:text-[11px] uppercase text-ink/40 mb-0.5">About</p>
+              <p class="text-xs sm:text-sm text-ink/80 leading-relaxed">{{ game.shortDescription || 'No description available.' }}</p>
             </div>
           </div>
 
           <!-- Steam Store Button -->
-          <div class="p-5 pt-0 mt-auto">
+          <div class="p-4 sm:p-5 pt-0 mt-auto">
             <a 
               :href="`https://store.steampowered.com/app/${steamId}`" 
               target="_blank" 
@@ -143,17 +157,17 @@ async function handleSave() {
       </div>
 
       <!-- RIGHT: Tracker Form -->
-      <div class="overflow-y-auto max-h-[88vh] p-6">
-        <h3 class="font-mono text-[11px] uppercase tracking-widest text-ink/40 mb-1">
+      <div class="overflow-y-auto max-h-[50vh] md:max-h-[85vh] p-4 sm:p-6">
+        <h3 class="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-ink/40 mb-0.5">
           {{ isExistingInLibrary ? 'Library Entry' : 'Shelf It' }}
         </h3>
-        <p class="font-display text-3xl leading-none mb-5 text-stub">{{ game?.title || '—' }}</p>
+        <p class="font-display text-2xl sm:text-3xl leading-tight mb-4 text-stub">{{ game?.title || '—' }}</p>
         
-        <form @submit.prevent="handleSave" class="space-y-5">
+        <form @submit.prevent="handleSave" class="space-y-4 sm:space-y-5">
           <!-- Status Field -->
           <div>
-            <label class="block font-mono text-xs uppercase text-ink/60 mb-1.5">Status</label>
-            <select v-model="status" class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2.5 font-body text-sm">
+            <label class="block font-mono text-xs uppercase text-ink/60 mb-1">Status</label>
+            <select v-model="status" class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm">
               <option value="Backlog">Backlog</option>
               <option value="In Progress">In Progress</option>
               <option value="On Hold">On Hold</option>
@@ -164,7 +178,7 @@ async function handleSave() {
           <template v-if="status === 'Completed'">
             <!-- Hours Played Field -->
             <div>
-              <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Hours Played (Optional)</label>
                 <button 
                   v-if="hoursPlayed !== null" 
@@ -230,7 +244,7 @@ async function handleSave() {
 
             <!-- Review Block -->
             <div>
-              <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Reviews & Comments (Optional)</label>
                 <button 
                   v-if="!isEditingReview && review" 
@@ -242,19 +256,17 @@ async function handleSave() {
                 </button>
               </div>
 
-              <!-- Textarea view mode when editing -->
               <textarea 
                 v-if="isEditingReview || !review"
                 v-model="review" 
-                rows="4" 
+                rows="3" 
                 placeholder="Share your experience playing this game..." 
-                class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2.5 font-body text-sm resize-none focus:outline-none focus:border-ink/40"
+                class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm resize-none focus:outline-none focus:border-ink/40"
               ></textarea>
 
-              <!-- Display Mode with Warm Theme Border -->
               <div 
                 v-else 
-                class="w-full bg-ink/5 border border-ink/20 rounded-sm p-3 font-body text-sm text-ink/80 leading-relaxed whitespace-pre-wrap min-h-22.5"
+                class="w-full bg-ink/5 border border-ink/20 rounded-sm p-3 font-body text-sm text-ink/80 leading-relaxed whitespace-pre-wrap min-h-17.5"
               >
                 {{ review }}
               </div>

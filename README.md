@@ -1,5 +1,8 @@
-# Vue 3 + TypeScript + Vite
+**Checkpoint** is a full-stack Web application built to help gamers track their backlogs, organize their collections, and discover new titles.
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+---
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+### Features
+- **Catalog Search & Discovery:** Fetch real-time game details, media, and metadata powered by game database APIs.
+- **Library Tracking:** Categorize titles into custom states (*Backlog*, *In Progress*, *Completed*).
+- **Personal Game Log:** Keep custom ratings, logs, and dates for games in your collection.
