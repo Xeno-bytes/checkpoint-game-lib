@@ -26,7 +26,7 @@ const route = useRoute()
           Discover
           <span 
             v-if="route.path === '/'" 
-            class="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-tag"
+            class="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-tag"
           ></span>
         </router-link>
 
@@ -38,7 +38,7 @@ const route = useRoute()
           Search
           <span 
             v-if="route.path === '/search'" 
-            class="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-tag"
+            class="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-tag"
           ></span>
         </router-link>
 
@@ -50,7 +50,7 @@ const route = useRoute()
           My Library
           <span 
             v-if="route.path === '/library'" 
-            class="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-tag"
+            class="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-tag"
           ></span>
         </router-link>
       </nav>
