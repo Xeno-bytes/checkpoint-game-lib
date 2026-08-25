@@ -23,7 +23,7 @@ async function loadLibraryData() {
 
 function openGameModal(steamId: number | string) {
   const idNum = Number(steamId);
-  if (!steamId || Number.isNaN(idNum)) return; // Prevents triggering modal with invalid IDs
+  if (!steamId || Number.isNaN(idNum)) return;
   
   activeModalId.value = idNum;
   activeModalEntry.value = library.value.find(i => Number(i.steam_id) === idNum) || null;
@@ -57,10 +57,12 @@ onMounted(loadLibraryData);
 </script>
 
 <template>
-  <div id="app" class="font-body text-ink min-h-screen relative">
+  <!-- Added overflow-x-hidden & w-full to prevent horizontal body scroll -->
+  <div id="app" class="font-body text-ink min-h-screen relative w-full overflow-x-hidden">
     <Header />
 
-    <main class="max-w-6xl mx-auto px-5 py-8">
+    <!-- Mobile-optimized container padding -->
+    <main class="max-w-6xl mx-auto px-3.5 sm:px-5 py-6 sm:py-8 w-full">
       <router-view 
         :library="library" 
         @openModal="openGameModal" 
@@ -77,12 +79,12 @@ onMounted(loadLibraryData);
       @toast="triggerToast"
     />
 
-    <!-- Toast Notification -->
+    <!-- Toast Notification (Responsive Placement) -->
     <Transition name="toast">
       <div 
         v-if="toastMessage" 
         :class="[
-          'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-sm shadow-xl font-mono text-xs uppercase tracking-wider flex items-center gap-2 border',
+          'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 px-4 py-3 rounded-sm shadow-xl font-mono text-xs uppercase tracking-wider flex items-center justify-center sm:justify-start gap-2 border max-w-sm mx-auto sm:mx-0',
           toastIsError 
             ? 'bg-red-950 text-red-200 border-red-800' 
             : 'bg-ink text-paper border-paper/20'
@@ -91,7 +93,7 @@ onMounted(loadLibraryData);
         <span :class="toastIsError ? 'text-red-400' : 'text-amber-400'">
           {{ toastIsError ? '✕' : '✓' }}
         </span>
-        <span>{{ toastMessage }}</span>
+        <span class="truncate">{{ toastMessage }}</span>
       </div>
     </Transition>
   </div>

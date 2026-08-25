@@ -6,18 +6,18 @@ const route = useRoute()
 
 <template>
   <header class="sticky top-0 z-30 bg-ink text-paper shelf-edge">
-    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
+    <div class="max-w-6xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between gap-2 sm:gap-4">
       
       <!-- LOGO / BRANDING -->
-      <div class="flex items-center gap-3">
-        <span class="font-display text-4xl tracking-wider leading-none text-tag">Checkpoint</span>
-        <span class="hidden sm:inline-block font-mono text-[11px] uppercase tracking-[0.2em] text-paper/50 border-l border-paper/30 pl-3 py-0.5">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span class="font-display text-2xl sm:text-4xl tracking-wider leading-none text-tag">Checkpoint</span>
+        <span class="hidden md:inline-block font-mono text-[11px] uppercase tracking-[0.2em] text-paper/50 border-l border-paper/30 pl-3 py-0.5">
           your game shelf
         </span>
       </div>
 
       <!-- NAVIGATION -->
-      <nav class="flex items-center gap-6 font-mono text-sm uppercase tracking-wider">
+      <nav class="flex items-center gap-3 sm:gap-6 font-mono text-xs sm:text-sm uppercase tracking-wider">
         <router-link 
           to="/" 
           class="relative py-1 transition-colors hover:text-tag"
@@ -26,7 +26,7 @@ const route = useRoute()
           Discover
           <span 
             v-if="route.path === '/'" 
-            class="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-tag"
+            class="absolute -bottom-3.5 sm:-bottom-2.5 left-0 right-0 h-0.5 bg-tag"
           ></span>
         </router-link>
 
@@ -38,7 +38,7 @@ const route = useRoute()
           Search
           <span 
             v-if="route.path === '/search'" 
-            class="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-tag"
+            class="absolute -bottom-3.5 sm:-bottom-2.5 left-0 right-0 h-0.5 bg-tag"
           ></span>
         </router-link>
 
@@ -47,10 +47,11 @@ const route = useRoute()
           class="relative py-1 transition-colors hover:text-tag"
           :class="route.path === '/library' ? 'text-tag font-medium' : 'text-paper/80'"
         >
-          My Library
+          <span class="sm:hidden">Library</span>
+          <span class="hidden sm:inline">My Library</span>
           <span 
             v-if="route.path === '/library'" 
-            class="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-tag"
+            class="absolute -bottom-3.5 sm:-bottom-2.5 left-0 right-0 h-0.5 bg-tag"
           ></span>
         </router-link>
       </nav>

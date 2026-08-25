@@ -329,3 +329,37 @@ code {
   right: 0;
   border-right-color: var(--border);
 }
+
+/* Low-Profile Scrollbar Track for Discover View */
+.custom-shelf-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+.custom-shelf-scroll::-webkit-scrollbar-track {
+  background: rgba(30, 27, 24, 0.05);
+  border-radius: 4px;
+}
+.custom-shelf-scroll::-webkit-scrollbar-thumb {
+  background: rgba(30, 27, 24, 0.25);
+  border-radius: 4px;
+}
+.custom-shelf-scroll::-webkit-scrollbar-thumb:hover {
+  background: #C1432E;
+}
+
+/* Side Mask Fades */
+.shelf-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 2%,
+    black 98%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 2%,
+    black 98%,
+    transparent 100%
+  );
+}
