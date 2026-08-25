@@ -7,15 +7,11 @@ const props = defineProps<{ library: LibraryItem[] }>();
 const emit = defineEmits<{(e: 'openModal', id: number | string): void}>();
 
 const selectedStatus = ref<string>('All');
-
-// Advanced Filter Controls
 const activeFilterType = ref<'all' | 'has_rating' | 'no_rating' | '1_star' | '2_stars' | '3_stars' | '4_stars' | '5_stars'>('all');
 const activeSortBy = ref<'recent' | 'hours_desc' | 'hours_asc' | 'rating_desc' | 'rating_asc'>('recent');
 
-// Check if any completed games exist in the library
 const hasCompletedGames = computed(() => props.library.some(item => item.status === 'Completed'));
 
-// Advanced filter panel visibility: ONLY visible if completed games exist AND user hasn't selected another status
 const showAdvancedFilters = computed(() => {
   if (!hasCompletedGames.value) return false;
   return selectedStatus.value === 'Completed' || selectedStatus.value === 'All';
@@ -24,12 +20,10 @@ const showAdvancedFilters = computed(() => {
 const filteredLibrary = computed(() => {
   let list = [...props.library];
 
-  // 1. Filter by Status
   if (selectedStatus.value !== 'All') {
     list = list.filter(i => i.status === selectedStatus.value);
   }
 
-  // 2. Advanced Filters (Only applied if Advanced Filters are active)
   if (showAdvancedFilters.value) {
     if (activeFilterType.value === 'has_rating') {
       list = list.filter(i => (i.rating || 0) > 0);
@@ -47,7 +41,6 @@ const filteredLibrary = computed(() => {
       list = list.filter(i => (i.rating || 0) === 5);
     }
 
-    // 3. Advanced Sorting
     if (activeSortBy.value === 'hours_desc') {
       list.sort((a, b) => ((b as any).hoursPlayed || 0) - ((a as any).hoursPlayed || 0));
     } else if (activeSortBy.value === 'hours_asc') {
@@ -59,7 +52,6 @@ const filteredLibrary = computed(() => {
     }
   }
 
-  // Default Sort by Recent
   if (activeSortBy.value === 'recent') {
     list.sort((a, b) => {
       const timeA = (a as any).created_at ? new Date((a as any).created_at).getTime() : (a.id || 0);
@@ -71,7 +63,6 @@ const filteredLibrary = computed(() => {
   return list;
 });
 
-// Helper for dynamic card chip badges
 function getCardBadge(item: LibraryItem) {
   if (activeSortBy.value.includes('hours') && (item as any).hoursPlayed) {
     return `${(item as any).hoursPlayed} hrs`;
@@ -85,34 +76,34 @@ function getCardBadge(item: LibraryItem) {
 
 <template>
   <section class="fade-in">
-    <div class="mb-6">
-      <h1 class="font-display text-5xl tracking-wide">My Library</h1>
-      <p class="font-mono text-sm text-ink/60 mt-1">Everything you've shelved, tracked, and rated.</p>
+    <div class="mb-4 sm:mb-6">
+      <h1 class="font-display text-3xl sm:text-5xl tracking-wide">My Library</h1>
+      <p class="font-mono text-xs sm:text-sm text-ink/60 mt-0.5 sm:mt-1">Everything you've shelved, tracked, and rated.</p>
     </div>
 
-    <!-- Filters Bar -->
-    <div class="bg-ink/95 text-paper rounded-sm px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-4">
+    <!-- Filters Bar (Mobile Column, Desktop Row) -->
+    <div class="bg-ink/95 text-paper rounded-sm p-3 sm:p-4 mb-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
       <!-- Status Tabs -->
-      <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="font-mono text-[11px] uppercase text-paper/50 mr-1">Status:</span>
+      <div class="flex items-center gap-1.5 flex-wrap w-full lg:w-auto">
+        <span class="font-mono text-[10px] sm:text-[11px] uppercase text-paper/50 mr-1 w-full sm:w-auto">Status:</span>
         <button 
           v-for="st in ['All', 'Backlog', 'In Progress', 'On Hold', 'Completed']" 
           :key="st"
           @click="selectedStatus = st"
-          :class="['font-mono text-xs uppercase px-3 py-1.5 rounded-full transition-colors', selectedStatus === st ? 'bg-tag text-ink font-bold' : 'bg-transparent border border-paper/30 hover:border-tag']"
+          :class="['font-mono text-[10px] sm:text-xs uppercase px-2.5 sm:px-3 py-1 rounded-full transition-colors', selectedStatus === st ? 'bg-tag text-ink font-bold' : 'bg-transparent border border-paper/30 hover:border-tag']"
         >
           {{ st }}
         </button>
       </div>
 
-      <!-- Advanced Filter Dropdowns (ONLY appears if Completed games exist and visible) -->
-      <div v-if="showAdvancedFilters" class="flex items-center gap-3 flex-wrap">
+      <!-- Advanced Filter Dropdowns -->
+      <div v-if="showAdvancedFilters" class="flex items-center gap-2 sm:gap-3 flex-wrap w-full lg:w-auto border-t border-paper/10 pt-3 lg:border-t-0 lg:pt-0">
         <!-- Filter Dropdown -->
-        <div class="flex items-center gap-1.5">
-          <label class="font-mono text-[11px] uppercase text-paper/50">Filter:</label>
+        <div class="flex items-center gap-1.5 flex-1 sm:flex-initial">
+          <label class="font-mono text-[10px] sm:text-[11px] uppercase text-paper/50">Filter:</label>
           <select 
             v-model="activeFilterType" 
-            class="bg-paper text-ink font-mono text-xs px-2.5 py-1.5 rounded-sm focus:outline-none"
+            class="bg-paper text-ink font-mono text-[11px] sm:text-xs px-2 py-1 rounded-sm focus:outline-none w-full sm:w-auto"
           >
             <option value="all">All Games</option>
             <option value="has_rating">Has Rating</option>
@@ -126,15 +117,15 @@ function getCardBadge(item: LibraryItem) {
         </div>
 
         <!-- Sort Dropdown -->
-        <div class="flex items-center gap-1.5">
-          <label class="font-mono text-[11px] uppercase text-paper/50">Sort:</label>
+        <div class="flex items-center gap-1.5 flex-1 sm:flex-initial">
+          <label class="font-mono text-[10px] sm:text-[11px] uppercase text-paper/50">Sort:</label>
           <select 
             v-model="activeSortBy" 
-            class="bg-paper text-ink font-mono text-xs px-2.5 py-1.5 rounded-sm focus:outline-none"
+            class="bg-paper text-ink font-mono text-[11px] sm:text-xs px-2 py-1 rounded-sm focus:outline-none w-full sm:w-auto"
           >
             <option value="recent">Recently Added</option>
-            <option value="hours_desc">Hours Played (High to Low)</option>
-            <option value="hours_asc">Hours Played (Low to High)</option>
+            <option value="hours_desc">Hours (High to Low)</option>
+            <option value="hours_asc">Hours (Low to High)</option>
             <option value="rating_desc">Rating (High to Low)</option>
             <option value="rating_asc">Rating (Low to High)</option>
           </select>
@@ -142,8 +133,8 @@ function getCardBadge(item: LibraryItem) {
       </div>
     </div>
 
-    <!-- Grid Layout configured for 16:9 Landscape cards -->
-    <div v-if="filteredLibrary.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+    <!-- Responsive Grid -->
+    <div v-if="filteredLibrary.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 justify-items-center">
       <GameCard 
         v-for="item in filteredLibrary" 
         :key="item.id || item.steam_id" 
@@ -158,7 +149,7 @@ function getCardBadge(item: LibraryItem) {
     </div>
 
     <!-- Empty State -->
-    <div v-else class="text-center py-16 text-ink/50 font-mono text-sm">
+    <div v-else class="text-center py-16 text-ink/50 font-mono text-xs sm:text-sm">
       No games match your current filter settings.
     </div>
   </section>

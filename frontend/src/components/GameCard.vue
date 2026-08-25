@@ -13,18 +13,15 @@ const emit = defineEmits<{(e: 'click', id: number): void}>();
 
 const imageError = ref(false);
 
-// Fallback logic prioritizing props.image
 const coverImage = computed(() => {
   if (!imageError.value && props.image) {
     return props.image;
   }
   
-  // Fallback to Steam CDN header format if props.image fails
   if (!imageError.value && props.steamId) {
     return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${props.steamId}/header.jpg`;
   }
 
-  // SVG Letterhead fallback if no image loads
   const initial = (props.name || '?').trim().charAt(0).toUpperCase();
   return `data:image/svg+xml;utf8,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="460" height="215">
@@ -48,12 +45,12 @@ function handleImageError() {
 <template>
   <div 
     @click="emit('click', steamId)"
-    class="game-card group relative shrink-0 w-64 sm:w-72 cursor-pointer bg-ink/90 rounded-md overflow-hidden border border-ink/20 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 snap-start"
+    class="game-card group relative shrink-0 w-44 sm:w-56 md:w-64 cursor-pointer bg-ink/90 rounded-md overflow-hidden border border-ink/20 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 snap-start"
     :style="{ '--spine-color': statusColor }"
   >
     <!-- Accent Color Left Spine -->
     <div 
-      class="absolute left-0 top-0 bottom-0 w-1.5 z-20 transition-colors duration-300"
+      class="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 z-20 transition-colors duration-300"
       :style="{ backgroundColor: statusColor }"
     ></div>
 
@@ -72,7 +69,7 @@ function handleImageError() {
       <!-- Rating Badge -->
       <span 
         v-if="ratingChip" 
-        class="absolute top-2 right-2 z-10 bg-black/70 backdrop-blur-md text-amber-300 font-mono text-[11px] font-bold px-2 py-0.5 rounded border border-amber-300/30 shadow"
+        class="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-10 bg-black/70 backdrop-blur-md text-amber-300 font-mono text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded border border-amber-300/30 shadow"
       >
         {{ ratingChip }}
       </span>
@@ -80,7 +77,7 @@ function handleImageError() {
       <!-- Status Badge -->
       <span 
         v-if="statusChip" 
-        class="absolute bottom-2 left-3 z-10 text-paper font-mono text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded shadow"
+        class="absolute bottom-1.5 left-2.5 sm:bottom-2 sm:left-3 z-10 text-paper font-mono text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 sm:px-2 py-0.5 rounded shadow"
         :style="{ backgroundColor: statusColor }"
       >
         {{ statusChip }}
@@ -88,8 +85,8 @@ function handleImageError() {
     </div>
 
     <!-- Card Footer / Title Bar -->
-    <div class="p-3 pl-4 bg-paper/95 border-t border-ink/10 flex flex-col justify-center min-h-[52px]">
-      <p class="font-mono text-xs font-bold text-ink uppercase tracking-wide leading-tight line-clamp-1 group-hover:text-tag transition-colors">
+    <div class="p-2.5 pl-3 sm:p-3 sm:pl-4 bg-paper/95 border-t border-ink/10 flex flex-col justify-center min-h-11 sm:min-h-13">
+      <p class="font-mono text-[11px] sm:text-xs font-bold text-ink uppercase tracking-wide leading-tight line-clamp-1 group-hover:text-tag transition-colors">
         {{ name }}
       </p>
     </div>
