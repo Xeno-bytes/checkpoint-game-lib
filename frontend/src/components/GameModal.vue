@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import type { LibraryItem, GameDetails } from '../types/game';
-import { fetchGameDetails, saveLibraryItem } from '../api';
+import { fetchGameDetails, saveLibraryItem, deleteLibraryItem } from '../api';
 import GenreTag from './GenreTag.vue';
+import { useAuthStore } from '../stores/auth';
+
+const authStore = useAuthStore();
 
 const props = defineProps<{
   steamId: number | null;
@@ -12,13 +15,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'saved', item: LibraryItem): void;
-  (e: 'deleted', id: number): void;
+  (e: 'deleted', id: string | number): void;
   (e: 'toast', msg: string, isError?: boolean): void;
 }>();
 
 const game = ref<GameDetails | null>(null);
 const loading = ref(false);
 const saving = ref(false);
+const deleting = ref(false);
 const formError = ref('');
 
 const status = ref<'Backlog' | 'In Progress' | 'On Hold' | 'Completed'>('Backlog');
@@ -32,39 +36,48 @@ const isExistingInLibrary = computed(() => {
   return !!props.existingEntry && !!props.existingEntry.status;
 });
 
-watch(() => props.steamId, async (newId) => {
-  if (!newId || Number.isNaN(Number(newId))) {
-    game.value = null;
-    return;
-  }
-  
-  if (props.existingEntry && props.existingEntry.status) {
-    status.value = props.existingEntry.status;
-    rating.value = props.existingEntry.rating || 0;
-    hoursPlayed.value = props.existingEntry.hoursPlayed || null;
-    review.value = props.existingEntry.notes || '';
-    isEditingReview.value = !props.existingEntry.notes;
-  } else {
-    status.value = 'Backlog';
-    rating.value = 0;
-    hoursPlayed.value = null;
-    review.value = '';
-    isEditingReview.value = true;
-  }
+// Watch both steamId & existingEntry so form re-hydrates properly
+watch(
+  () => [props.steamId, props.existingEntry] as const,
+  async ([newId, newEntry]) => {
+    const parsedId = Number(newId);
+    if (!newId || Number.isNaN(parsedId) || parsedId === 0) {
+      game.value = null;
+      loading.value = false;
+      return;
+    }
 
-  formError.value = '';
+    // Read values with MongoDB key fallback support
+    if (newEntry) {
+      const raw = newEntry as Record<string, any>;
+      status.value = newEntry.status || raw.status || 'Backlog';
+      rating.value = Number(newEntry.rating ?? raw.rating) || 0;
+      hoursPlayed.value = newEntry.hoursPlayed ?? raw.playtimeHours ?? null;
+      review.value = newEntry.notes || raw.reviewContent || '';
+      isEditingReview.value = !review.value;
+    } else {
+      status.value = 'Backlog';
+      rating.value = 0;
+      hoursPlayed.value = null;
+      review.value = '';
+      isEditingReview.value = true;
+    }
 
-  loading.value = true;
-  try {
-    game.value = await fetchGameDetails(Number(newId));
-  } catch (err) {
-    game.value = null;
-  } finally {
-    loading.value = false;
-  }
-});
+    formError.value = '';
 
-const activeRating = computed(() => hoverRating.value !== null ? hoverRating.value : rating.value);
+    loading.value = true;
+    try {
+      game.value = await fetchGameDetails(parsedId);
+    } catch (err) {
+      game.value = null;
+    } finally {
+      loading.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+const activeRating = computed(() => (hoverRating.value !== null ? hoverRating.value : rating.value));
 
 function clearRating() {
   rating.value = 0;
@@ -73,22 +86,43 @@ function clearRating() {
 
 async function handleSave() {
   if (!props.steamId || !game.value) return;
+
+  if (!authStore.firebaseUser) {
+    emit('toast', 'Please sign in to save games to your shelf', true);
+    authStore.loginWithGoogle();
+    return;
+  }
+
+  if (authStore.needsProfileSetup) {
+    emit('toast', 'Please set up your nickname first', true);
+    return;
+  }
+
   saving.value = true;
   formError.value = '';
 
-  const payload: Partial<LibraryItem> & Record<string, any> = {
-    id: props.existingEntry?.id,
+  const isCompleted = status.value === 'Completed';
+  const rawEntry = (props.existingEntry as any) || {};
+
+  // Payload contains both standard and MongoDB keys
+  const payload: Record<string, any> = {
+    id: props.existingEntry?.id || rawEntry._id,
+    _id: rawEntry._id || props.existingEntry?.id,
     steam_id: Number(props.steamId),
+    appId: Number(props.steamId),
     name: game.value.title,
     background_image: game.value.icon,
     status: status.value,
-    rating: status.value === 'Completed' ? rating.value : 0,
-    hoursPlayed: status.value === 'Completed' ? hoursPlayed.value : null,
-    notes: status.value === 'Completed' ? review.value.trim() : '',
+    rating: isCompleted ? rating.value : 0,
+    hoursPlayed: isCompleted ? hoursPlayed.value : null,
+    playtimeHours: isCompleted ? hoursPlayed.value : null,
+    notes: isCompleted ? review.value.trim() : '',
+    reviewContent: isCompleted ? review.value.trim() : '',
   };
 
   try {
-    const saved = await saveLibraryItem(payload as any);
+    const token = await authStore.getToken();
+    const saved = await saveLibraryItem(payload as any, token);
     emit('saved', saved);
     const actionText = isExistingInLibrary.value ? 'Updated entry for' : 'Saved';
     emit('toast', `${actionText} ${game.value.title}`);
@@ -99,29 +133,50 @@ async function handleSave() {
     saving.value = false;
   }
 }
+
+async function handleDelete() {
+  const entryId = props.existingEntry?.id || (props.existingEntry as any)?._id;
+  if (!entryId) return;
+
+  deleting.value = true;
+  try {
+    const token = await authStore.getToken();
+    await deleteLibraryItem(entryId, token);
+    emit('deleted', entryId);
+    emit('toast', `Removed ${game.value?.title || 'game'} from shelf`);
+    emit('close');
+  } catch (err) {
+    formError.value = "Couldn't remove entry. Try again.";
+  } finally {
+    deleting.value = false;
+  }
+}
 </script>
 
 <template>
-  <div v-if="steamId" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6">
+  <div v-if="props.steamId" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6">
     <div class="case-open bg-paper w-full max-w-4xl max-h-[90vh] md:max-h-[85vh] rounded-sm shadow-2xl overflow-hidden relative grid grid-cols-1 md:grid-cols-2">
+      <!-- Close Button -->
       <button 
+        type="button"
         @click="emit('close')" 
         class="absolute top-3 right-3 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-ink text-paper font-mono text-xs sm:text-sm hover:bg-stub transition-colors shadow-md flex items-center justify-center"
       >
         ✕
       </button>
 
-      <!-- LEFT: Game Details -->
+      <!-- LEFT: Game Details from API -->
       <div class="overflow-y-auto max-h-[40vh] md:max-h-[85vh] border-b md:border-b-0 md:border-r border-dashed border-ink/20 flex flex-col justify-between">
         <div v-if="loading" class="p-4 sm:p-5 space-y-3">
           <div class="skeleton w-full aspect-video"></div>
           <div class="skeleton h-4 w-3/4 rounded-sm"></div>
         </div>
+
         <div v-else-if="game" class="p-0 flex-1 flex flex-col">
           <img :src="game.icon" :alt="game.title" class="w-full aspect-video object-cover" />
           <div class="p-4 sm:p-5 space-y-3 sm:space-y-4 flex-1">
             <div class="flex flex-wrap gap-2 font-mono text-[10px] uppercase">
-              <span class="bg-ink/10 px-2 py-1 rounded-sm">{{ game.releaseDate }}</span>
+              <span v-if="game.releaseDate" class="bg-ink/10 px-2 py-1 rounded-sm">{{ game.releaseDate }}</span>
             </div>
 
             <!-- Genres -->
@@ -133,16 +188,17 @@ async function handleSave() {
               <p v-else class="text-xs sm:text-sm text-ink/40 font-mono">—</p>
             </div>
 
+            <!-- About -->
             <div>
               <p class="font-mono text-[10px] sm:text-[11px] uppercase text-ink/40 mb-0.5">About</p>
               <p class="text-xs sm:text-sm text-ink/80 leading-relaxed">{{ game.shortDescription || 'No description available.' }}</p>
             </div>
           </div>
 
-          <!-- Steam Store Button -->
+          <!-- Steam Store Link -->
           <div class="p-4 sm:p-5 pt-0 mt-auto">
             <a 
-              :href="`https://store.steampowered.com/app/${steamId}`" 
+              :href="`https://store.steampowered.com/app/${props.steamId}`" 
               target="_blank" 
               rel="noopener noreferrer"
               class="inline-flex items-center justify-center gap-2 w-full bg-ink/10 hover:bg-ink hover:text-paper text-ink font-mono text-xs uppercase tracking-wider py-2.5 rounded-sm transition-colors"
@@ -154,9 +210,13 @@ async function handleSave() {
             </a>
           </div>
         </div>
+
+        <div v-else class="p-8 text-center text-ink/60 font-mono text-xs">
+          Unable to fetch details for App ID {{ props.steamId }}.
+        </div>
       </div>
 
-      <!-- RIGHT: Tracker Form -->
+      <!-- RIGHT: User Tracker Form -->
       <div class="overflow-y-auto max-h-[50vh] md:max-h-[85vh] p-4 sm:p-6">
         <h3 class="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-ink/40 mb-0.5">
           {{ isExistingInLibrary ? 'Library Entry' : 'Shelf It' }}
@@ -167,7 +227,7 @@ async function handleSave() {
           <!-- Status Field -->
           <div>
             <label class="block font-mono text-xs uppercase text-ink/60 mb-1">Status</label>
-            <select v-model="status" class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm">
+            <select v-model="status" class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm text-ink focus:outline-none focus:border-ink/40">
               <option value="Backlog">Backlog</option>
               <option value="In Progress">In Progress</option>
               <option value="On Hold">On Hold</option>
@@ -175,8 +235,9 @@ async function handleSave() {
             </select>
           </div>
 
+          <!-- Fields ONLY visible when status === 'Completed' -->
           <template v-if="status === 'Completed'">
-            <!-- Hours Played Field -->
+            <!-- Hours Played -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Hours Played (Optional)</label>
@@ -194,8 +255,8 @@ async function handleSave() {
                 type="number" 
                 step="0.1" 
                 min="0" 
-                placeholder="e.g. 45.5" 
-                class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm"
+                placeholder="e.g. 41" 
+                class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm text-ink focus:outline-none focus:border-ink/40"
               />
             </div>
 
@@ -242,7 +303,7 @@ async function handleSave() {
               </div>
             </div>
 
-            <!-- Review Block -->
+            <!-- Review & Comments -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Reviews & Comments (Optional)</label>
@@ -261,7 +322,7 @@ async function handleSave() {
                 v-model="review" 
                 rows="3" 
                 placeholder="Share your experience playing this game..." 
-                class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm resize-none focus:outline-none focus:border-ink/40"
+                class="w-full bg-white border border-ink/15 rounded-sm px-3 py-2 font-body text-sm text-ink resize-none focus:outline-none focus:border-ink/40"
               ></textarea>
 
               <div 
@@ -273,14 +334,30 @@ async function handleSave() {
             </div>
           </template>
 
-          <!-- Dynamic Button Label -->
-          <button 
-            type="submit" 
-            :disabled="saving" 
-            class="w-full bg-ink text-paper font-mono text-xs uppercase tracking-widest py-3 rounded-sm hover:bg-stub transition-colors"
-          >
-            {{ saving ? 'Saving...' : (isExistingInLibrary ? 'Update Changes' : 'Save to Shelf') }}
-          </button>
+          <p v-if="formError" class="font-mono text-xs text-red-500 font-bold">
+            {{ formError }}
+          </p>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2 pt-2">
+            <button 
+              type="submit" 
+              :disabled="saving || deleting" 
+              class="flex-1 bg-ink text-paper font-mono text-xs uppercase tracking-widest py-3 rounded-sm hover:bg-stub transition-colors disabled:opacity-50"
+            >
+              {{ saving ? 'Saving...' : (isExistingInLibrary ? 'Update Changes' : 'Save to Shelf') }}
+            </button>
+
+            <button 
+              v-if="isExistingInLibrary" 
+              type="button" 
+              @click="handleDelete" 
+              :disabled="saving || deleting" 
+              class="px-4 py-3 bg-red-50 border border-red-200 text-red-600 font-mono text-xs uppercase tracking-wider rounded-sm hover:bg-red-100 transition-colors disabled:opacity-50"
+            >
+              {{ deleting ? '...' : 'Remove' }}
+            </button>
+          </div>
         </form>
       </div>
     </div>
