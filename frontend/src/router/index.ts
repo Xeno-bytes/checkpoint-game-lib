@@ -6,7 +6,12 @@ import LibraryView from '../views/LibraryView.vue'
 const routes = [
   { path: '/', name: 'discover', component: DiscoverView },
   { path: '/search', name: 'search', component: SearchView },
-  { path: '/library', name: 'library', component: LibraryView },
+  { 
+    path: '/library', 
+    name: 'library', 
+    component: LibraryView,
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = createRouter({

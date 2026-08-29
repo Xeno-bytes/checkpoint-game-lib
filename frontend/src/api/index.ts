@@ -16,17 +16,35 @@ export async function fetchGameDetails(steamId: number): Promise<GameDetails> {
   return res.json();
 }
 
-export async function saveLibraryItem(payload: any) {
+export async function saveLibraryItem(payload: any, token?: string | null) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${BACKEND_URL}/library`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
+
+  if (!res.ok) throw new Error('Failed to save game');
   return res.json();
 }
 
-export async function deleteLibraryItem(id: number) {
-  const res = await fetch(`${BACKEND_URL}/library/${id}`, { method: 'DELETE' });
+export async function deleteLibraryItem(id: number, token?: string | null) {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BACKEND_URL}/library/${id}`, { 
+    method: 'DELETE',
+    headers 
+  });
   return res.json();
 }
 
@@ -36,8 +54,13 @@ export async function searchGames(query: string) {
   return res.json();
 }
 
-export async function fetchLibrary() {
-  const res = await fetch(`${BACKEND_URL}/library`);
+export async function fetchLibrary(token?: string | null) {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BACKEND_URL}/library`, { headers });
   if (!res.ok) throw new Error('Failed to fetch library data');
   return res.json();
 }
