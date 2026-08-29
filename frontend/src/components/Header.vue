@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
+
+const showLogoutModal = ref(false)
+
+function confirmLogout() {
+  authStore.logout()
+  showLogoutModal.value = false
+}
 </script>
 
 <template>
@@ -72,7 +80,7 @@ const authStore = useAuthStore()
               @{{ authStore.userProfile?.nickname || 'user' }}
             </span>
             <button 
-              @click="authStore.logout"
+              @click="showLogoutModal = true"
               class="text-[10px] sm:text-xs text-paper/60 hover:text-paper border border-paper/30 px-2 py-0.5 transition hover:border-paper"
             >
               Out
@@ -92,4 +100,74 @@ const authStore = useAuthStore()
 
     </div>
   </header>
+
+  <!-- LOGOUT CONFIRMATION POPUP -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div 
+        v-if="showLogoutModal" 
+        class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="showLogoutModal = false"
+      >
+        <div class="bg-paper border border-ink/20 w-full max-w-sm rounded-sm shadow-2xl p-5 sm:p-6 space-y-4 relative">
+          
+          <!-- Close Button -->
+          <button 
+            type="button"
+            @click="showLogoutModal = false" 
+            class="absolute top-3 right-3 w-7 h-7 rounded-full bg-ink text-paper font-mono text-xs hover:bg-stub transition-colors flex items-center justify-center"
+          >
+            ✕
+          </button>
+
+          <!-- Modal Header -->
+          <div class="space-y-1">
+            <h3 class="font-mono text-[11px] uppercase tracking-widest text-ink/40">
+              Session Action
+            </h3>
+            <p class="font-display text-2xl leading-none text-stub">
+              Sign Out?
+            </p>
+          </div>
+
+          <!-- Modal Description -->
+          <p class="text-xs sm:text-sm text-ink/80 leading-relaxed font-body">
+            Are you sure you want to logout? You'll need to sign back in to access your game library and custom lists.
+          </p>
+
+          <!-- Themed Action Buttons -->
+          <div class="flex items-center gap-2 pt-2 font-mono text-xs uppercase tracking-wider">
+            <button 
+              type="button" 
+              @click="confirmLogout"
+              class="flex-1 bg-ink text-paper py-2.5 rounded-sm hover:bg-stub transition-colors"
+            >
+              Log Out
+            </button>
+
+            <button 
+              type="button" 
+              @click="showLogoutModal = false"
+              class="flex-1 bg-ink/10 hover:bg-ink hover:text-paper text-ink py-2.5 rounded-sm transition-colors border border-ink/10"
+            >
+              Cancel
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+</style>
