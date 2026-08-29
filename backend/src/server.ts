@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { connectDB } from './db.js';
 import { searchSteamGames, fetchGameDetails, fetchFeaturedGames } from './steam.js';
+import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
 
@@ -12,6 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 connectDB();
+
+app.use('/api/users', userRoutes);
 
 let libraryStore: any[] = [];
 
