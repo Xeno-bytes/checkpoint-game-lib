@@ -1,14 +1,36 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import { connectDB } from './db.js';
 import { searchSteamGames, fetchGameDetails, fetchFeaturedGames } from './steam.js';
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+connectDB();
+
 let libraryStore: any[] = [];
 
-// 1. Library Routes
+// TEST ROUTE
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await connectDB();
+    const isConnected = mongoose.connection.readyState === 1;
+    res.json({
+      success: isConnected,
+      message: isConnected ? 'Connected to MongoDB Atlas!' : 'Database disconnected',
+      readyState: mongoose.connection.readyState
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+// --- LIBRARY ROUTES ---
 app.get('/api/library', (req, res) => {
   res.json(libraryStore);
 });
@@ -30,7 +52,7 @@ app.delete('/api/library/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// 2. Specific Game Routes 
+// --- GAME ROUTES ---
 app.get('/api/games/featured', async (req, res) => {
   try {
     const featured = await fetchFeaturedGames();
@@ -46,7 +68,6 @@ app.get('/api/games/search', async (req, res) => {
   res.json(results);
 });
 
-// 3. Dynamic Parameter Route
 app.get('/api/games/:id', async (req, res) => {
   const appId = Number(req.params.id);
 
@@ -62,6 +83,7 @@ app.get('/api/games/:id', async (req, res) => {
   res.json(details);
 });
 
+// --- START SERVER ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
