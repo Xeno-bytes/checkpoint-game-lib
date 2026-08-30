@@ -26,28 +26,37 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Fetch Mongo profile from /api/users/me
   async function fetchUserProfile() {
-  if (!firebaseUser.value) return;
-  try {
-    const token = await getToken();
-    const res = await fetch(`${BACKEND_URL}/users/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.status === 404) {
+    if (!firebaseUser.value) {
       userProfile.value = null;
-      needsProfileSetup.value = true;
-    } else if (res.ok) {
-      const data = await res.json();
-      userProfile.value = {
-        ...data,
-        nickname: data.username || data.nickname
-      };
+      needsProfileSetup.value = false;
+      return;
+    }
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BACKEND_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 404) {
+        userProfile.value = null;
+        needsProfileSetup.value = true;
+      } else if (res.ok) {
+        const data = await res.json();
+        const userData = data.user || data;
+        userProfile.value = {
+          ...userData,
+          nickname: userData.username || userData.nickname
+        };
+        needsProfileSetup.value = false;
+      } else {
+        needsProfileSetup.value = false;
+      }
+    } catch (err) {
+      console.error('Failed to fetch user profile:', err);
       needsProfileSetup.value = false;
     }
-  } catch (err) {
-    console.error('Failed to fetch user profile:', err);
   }
-}
 
   // Trigger Google Login
   async function loginWithGoogle() {
@@ -63,28 +72,29 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Complete profile registration with chosen nickname
   async function setupProfile(nickname: string) {
-  const token = await getToken();
-  const res = await fetch('/api/users/profile', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ username: nickname })
-  });
+    const token = await getToken();
+    
+    const res = await fetch(`${BACKEND_URL}/users/setup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ nickname })
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Failed to create profile');
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to create profile');
+    }
+
+    userProfile.value = {
+      ...data,
+      nickname: data.username || data.nickname
+    };
+    needsProfileSetup.value = false;
+    return data;
   }
-
-  userProfile.value = {
-    ...data,
-    nickname: data.username
-  };
-  needsProfileSetup.value = false;
-  return data;
-}
 
   // Logout
   async function logout() {

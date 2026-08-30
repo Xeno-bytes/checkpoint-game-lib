@@ -63,13 +63,13 @@ function confirmLogout() {
           </router-link>
 
           <router-link 
-            to="/library" 
+            :to="authStore.userProfile?.nickname ? `/library/${authStore.userProfile.nickname}` : '/library'" 
             class="relative py-1 transition-colors hover:text-tag"
-            :class="route.path === '/library' ? 'text-tag font-medium' : 'text-paper/80'"
+            :class="route.path.startsWith('/library') ? 'text-tag font-medium' : 'text-paper/80'"
           >
             My Library
             <span 
-              v-if="route.path === '/library'" 
+              v-if="route.path.startsWith('/library')" 
               class="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-tag"
             ></span>
           </router-link>

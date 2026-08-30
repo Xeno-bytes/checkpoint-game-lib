@@ -7,10 +7,9 @@ const routes = [
   { path: '/', name: 'discover', component: DiscoverView },
   { path: '/search', name: 'search', component: SearchView },
   { 
-    path: '/library', 
+    path: '/library/:username?', 
     name: 'library', 
-    component: LibraryView,
-    meta: { requiresAuth: true }
+    component: LibraryView 
   },
 ]
 

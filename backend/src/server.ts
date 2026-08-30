@@ -17,7 +17,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-
 // MongoDB Connection
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shelfdb';
 
@@ -26,14 +25,18 @@ if (!MONGO_URI) {
 } else {
   mongoose
     .connect(MONGO_URI)
-    .then(() => console.log('✅ Connected to MongoDB Atlas'))
+    .then(() => {
+      console.log('✅ Connected to MongoDB Atlas');
+
+      // Drop legacy index on 'nickname' if it still exists in MongoDB
+      mongoose.connection.collection('users').dropIndex('nickname_1')
+        .then(() => console.log('🗑️ Dropped stale nickname_1 index'))
+        .catch(() => {
+          // Safe to ignore if index was already removed
+        });
+    })
     .catch((err) => console.error('MongoDB connection error:', err));
 }
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch((err) => console.error('MongoDB connection error:', err));
 
 // --- USER & AUTH ROUTES ---
 
@@ -47,7 +50,6 @@ app.get('/api/users/me', verifyFirebaseToken, async (req: AuthenticatedRequest, 
 
     const user = await User.findOne({ firebaseUid });
     
-    // If user document doesn't exist OR user has no username set yet
     if (!user || !user.username) {
       return res.status(404).json({ error: 'User profile incomplete' });
     }
@@ -58,31 +60,29 @@ app.get('/api/users/me', verifyFirebaseToken, async (req: AuthenticatedRequest, 
   }
 });
 
-// POST /api/users/profile -> Create or update user profile
-app.post('/api/users/profile', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
+// Shared handler for setup and profile updating
+const handleSaveProfile = async (req: AuthenticatedRequest, res: express.Response) => {
   try {
     const firebaseUid = req.user?.uid;
     if (!firebaseUid) {
       return res.status(401).json({ error: 'Unauthorized: Missing UID' });
     }
 
-    const { username } = req.body;
-    if (!username || typeof username !== 'string' || username.trim().length < 3) {
+    // Support both 'nickname' and 'username' from request body
+    const rawName = req.body.nickname || req.body.username;
+    if (!rawName || typeof rawName !== 'string' || rawName.trim().length < 3) {
       return res.status(400).json({ error: 'Username must be at least 3 characters' });
     }
 
-    const trimmedUsername = username.trim();
+    const trimmedUsername = rawName.trim().toLowerCase();
 
-    // Check if nickname is taken by another user
-    const existingUsername = await User.findOne({ 
-      username: trimmedUsername, 
-      firebaseUid: { $ne: firebaseUid } 
-    });
-
-    if (existingUsername) {
+    // Check if username is already taken by another user
+    const existingUser = await User.findOne({ username: trimmedUsername });
+    if (existingUser && existingUser.firebaseUid !== firebaseUid) {
       return res.status(400).json({ error: 'Username is already taken' });
     }
 
+    // Create or update the user document in MongoDB
     const user = await User.findOneAndUpdate(
       { firebaseUid },
       { 
@@ -90,17 +90,53 @@ app.post('/api/users/profile', verifyFirebaseToken, async (req: AuthenticatedReq
         email: req.user?.email || '', 
         username: trimmedUsername 
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    res.json(user);
+    return res.status(200).json(user);
+  } catch (err: any) {
+    console.error('❌ Server Profile Save Error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to save profile' });
+  }
+};
+
+// POST /api/users/setup & POST /api/users/profile
+app.post('/api/users/setup', verifyFirebaseToken, handleSaveProfile);
+app.post('/api/users/profile', verifyFirebaseToken, handleSaveProfile);
+
+// GET /api/users/profile/:username -> Fetch public user profile and their library
+app.get('/api/users/profile/:username', async (req, res) => {
+  try {
+    const rawUsername = req.params.username.trim();
+    
+    // Case-insensitive match on username
+    const user = await User.findOne({
+      username: new RegExp(`^${rawUsername}$`, 'i')
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Fetch library items belonging to this user
+    const libraryItems = await LibraryItem.find({ userId: user._id }).sort({ updatedAt: -1 });
+
+    res.json({
+      user: {
+        _id: user._id,
+        username: user.username,
+        createdAt: user.createdAt,
+      },
+      library: libraryItems,
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to save profile' });
+    console.error('Failed to fetch public profile:', err);
+    res.status(500).json({ error: 'Failed to fetch public library' });
   }
 });
 
 // --- GAMES ROUTES ---
-// GET /api/games/featured -> Public endpoint to fetch featured games from Steam
+
 app.get('/api/games/featured', async (_req, res) => {
   try {
     const featured = await fetchFeaturedGames();
@@ -111,7 +147,6 @@ app.get('/api/games/featured', async (_req, res) => {
   }
 });
 
-// GET /api/games/search?q=query -> Public endpoint to search Steam games
 app.get('/api/games/search', async (req, res) => {
   try {
     const query = (req.query.q as string) || '';
@@ -127,7 +162,6 @@ app.get('/api/games/search', async (req, res) => {
   }
 });
 
-// GET /api/games/:id -> Public endpoint to fetch details for a single Steam game
 app.get('/api/games/:id', async (req, res) => {
   try {
     const appId = Number(req.params.id);
@@ -150,7 +184,6 @@ app.get('/api/games/:id', async (req, res) => {
 
 // --- LIBRARY / SHELF ROUTES ---
 
-// GET /api/library -> Fetch shelf items for logged-in user
 app.get('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
   try {
     const firebaseUid = req.user?.uid;
@@ -168,7 +201,6 @@ app.get('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, r
   }
 });
 
-// POST /api/library -> Save or update a game in user shelf
 app.post('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
   try {
     const firebaseUid = req.user?.uid;
@@ -183,7 +215,6 @@ app.post('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, 
 
     const { steam_id, status, rating, hoursPlayed, notes } = req.body;
 
-    // Map UI statuses to schema enum values
     const statusMap: Record<string, string> = {
       'In Progress': 'Playing',
       'Completed': 'Completed',
@@ -213,7 +244,6 @@ app.post('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, 
   }
 });
 
-// DELETE /api/library/:id -> Delete shelf item
 app.delete('/api/library/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;

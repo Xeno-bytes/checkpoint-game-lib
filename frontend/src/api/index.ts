@@ -70,3 +70,12 @@ export async function fetchFeaturedGames() {
   if (!res.ok) throw new Error('Failed to fetch featured games');
   return res.json();
 }
+
+export async function fetchPublicLibrary(username: string) {
+  const res = await fetch(`${BACKEND_URL}/users/profile/${encodeURIComponent(username)}`);
+  if (!res.ok) {
+    if (res.status === 404) throw new Error('User not found');
+    throw new Error('Failed to fetch public library data');
+  }
+  return res.json();
+}
