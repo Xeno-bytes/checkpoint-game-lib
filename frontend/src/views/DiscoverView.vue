@@ -11,7 +11,6 @@ const topSellers = ref<SteamGame[]>([]);
 const newReleases = ref<SteamGame[]>([]);
 const loading = ref(true);
 
-// Section Scroll References
 const popularRef = ref<HTMLElement | null>(null);
 const topSellersRef = ref<HTMLElement | null>(null);
 const newReleasesRef = ref<HTMLElement | null>(null);
@@ -79,39 +78,41 @@ onMounted(async () => {
             Popular Right Now
           </h2>
 
-          <!-- Enhanced High-Visibility Scroll Controls -->
           <div class="flex items-center gap-2">
             <button 
               @click="scrollSection(popularRef, 'left')"
               class="w-8 h-8 rounded-full bg-ink text-paper hover:bg-stub transition-all shadow-md hover:scale-105 active:scale-95 font-mono text-base flex items-center justify-center border border-paper/20 cursor-pointer"
-              title="Scroll Left (Loops to end)"
+              title="Scroll Left"
             >
               ‹
             </button>
             <button 
               @click="scrollSection(popularRef, 'right')"
               class="w-8 h-8 rounded-full bg-ink text-paper hover:bg-stub transition-all shadow-md hover:scale-105 active:scale-95 font-mono text-base flex items-center justify-center border border-paper/20 cursor-pointer"
-              title="Scroll Right (Loops to start)"
+              title="Scroll Right"
             >
               ›
             </button>
           </div>
         </div>
 
-        <!-- Shelf Track -->
         <div class="relative shelf-mask">
           <div 
             ref="popularRef"
             class="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-1 px-1 custom-shelf-scroll scroll-smooth"
           >
-            <GameCard 
+            <div 
               v-for="game in popular" 
               :key="game.id" 
-              :steam-id="game.id" 
-              :name="game.name" 
-              :image="game.tiny_image"
-              @click="emit('openModal', $event)" 
-            />
+              class="w-48 sm:w-56 shrink-0 snap-start"
+            >
+              <GameCard 
+                :steam-id="game.id" 
+                :name="game.name" 
+                :image="game.tiny_image"
+                @click="emit('openModal', $event)" 
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -123,19 +124,18 @@ onMounted(async () => {
             Top Sellers
           </h2>
 
-          <!-- Enhanced High-Visibility Scroll Controls -->
           <div class="flex items-center gap-2">
             <button 
               @click="scrollSection(topSellersRef, 'left')"
               class="w-8 h-8 rounded-full bg-ink text-paper hover:bg-teal transition-all shadow-md hover:scale-105 active:scale-95 font-mono text-base flex items-center justify-center border border-paper/20 cursor-pointer"
-              title="Scroll Left (Loops to end)"
+              title="Scroll Left"
             >
               ‹
             </button>
             <button 
               @click="scrollSection(topSellersRef, 'right')"
               class="w-8 h-8 rounded-full bg-ink text-paper hover:bg-teal transition-all shadow-md hover:scale-105 active:scale-95 font-mono text-base flex items-center justify-center border border-paper/20 cursor-pointer"
-              title="Scroll Right (Loops to start)"
+              title="Scroll Right"
             >
               ›
             </button>
@@ -147,14 +147,18 @@ onMounted(async () => {
             ref="topSellersRef"
             class="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-1 px-1 custom-shelf-scroll scroll-smooth"
           >
-            <GameCard 
+            <div 
               v-for="game in topSellers" 
               :key="game.id" 
-              :steam-id="game.id" 
-              :name="game.name" 
-              :image="game.tiny_image"
-              @click="emit('openModal', $event)"
-            />
+              class="w-48 sm:w-56 shrink-0 snap-start"
+            >
+              <GameCard 
+                :steam-id="game.id" 
+                :name="game.name" 
+                :image="game.tiny_image"
+                @click="emit('openModal', $event)"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -166,19 +170,18 @@ onMounted(async () => {
             New & Trending
           </h2>
 
-          <!-- Enhanced High-Visibility Scroll Controls -->
           <div class="flex items-center gap-2">
             <button 
               @click="scrollSection(newReleasesRef, 'left')"
               class="w-8 h-8 rounded-full bg-ink text-paper hover:bg-tag hover:text-ink transition-all shadow-md hover:scale-105 active:scale-95 font-mono text-base flex items-center justify-center border border-paper/20 cursor-pointer"
-              title="Scroll Left (Loops to end)"
+              title="Scroll Left"
             >
               ‹
             </button>
             <button 
               @click="scrollSection(newReleasesRef, 'right')"
               class="w-8 h-8 rounded-full bg-ink text-paper hover:bg-tag hover:text-ink transition-all shadow-md hover:scale-105 active:scale-95 font-mono text-base flex items-center justify-center border border-paper/20 cursor-pointer"
-              title="Scroll Right (Loops to start)"
+              title="Scroll Right"
             >
               ›
             </button>
@@ -190,14 +193,18 @@ onMounted(async () => {
             ref="newReleasesRef"
             class="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-1 px-1 custom-shelf-scroll scroll-smooth"
           >
-            <GameCard 
+            <div 
               v-for="game in newReleases" 
               :key="game.id" 
-              :steam-id="game.id" 
-              :name="game.name" 
-              :image="game.tiny_image"
-              @click="emit('openModal', $event)"
-            />
+              class="w-48 sm:w-56 shrink-0 snap-start"
+            >
+              <GameCard 
+                :steam-id="game.id" 
+                :name="game.name" 
+                :image="game.tiny_image"
+                @click="emit('openModal', $event)"
+              />
+            </div>
           </div>
         </div>
       </section>

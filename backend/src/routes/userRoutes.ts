@@ -51,7 +51,7 @@ router.post('/setup', verifyFirebaseToken, async (req: AuthenticatedRequest, res
     const newUser = await User.create({
       firebaseUid: uid,
       email,
-      nickname: cleanNickname,
+      username: cleanNickname,
     });
 
     res.status(201).json(newUser);

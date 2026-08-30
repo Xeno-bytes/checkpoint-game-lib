@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -7,10 +7,17 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const showLogoutModal = ref(false)
+const isMobileMenuOpen = ref(false)
+
+// Close sidebar navigation automatically whenever route changes
+watch(() => route.path, () => {
+  isMobileMenuOpen.value = false
+})
 
 function confirmLogout() {
   authStore.logout()
   showLogoutModal.value = false
+  isMobileMenuOpen.value = false
 }
 </script>
 
@@ -20,15 +27,17 @@ function confirmLogout() {
       
       <!-- LOGO / BRANDING -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <span class="font-display text-2xl sm:text-4xl tracking-wider leading-none text-tag">Checkpoint</span>
+        <router-link to="/" class="font-display text-2xl sm:text-4xl tracking-wider leading-none text-tag">
+          Checkpoint
+        </router-link>
         <span class="hidden md:inline-block font-mono text-[11px] uppercase tracking-[0.2em] text-paper/50 border-l border-paper/30 pl-3 py-0.5">
           your game shelf
         </span>
       </div>
 
-      <!-- NAVIGATION & AUTH CONTROLS -->
-      <div class="flex items-center gap-3 sm:gap-6">
-        <nav class="flex items-center gap-3 sm:gap-6 font-mono text-xs sm:text-sm uppercase tracking-wider">
+      <!-- DESKTOP NAVIGATION & AUTH CONTROLS -->
+      <div class="hidden md:flex items-center gap-6">
+        <nav class="flex items-center gap-6 font-mono text-sm uppercase tracking-wider">
           <router-link 
             to="/" 
             class="relative py-1 transition-colors hover:text-tag"
@@ -58,8 +67,7 @@ function confirmLogout() {
             class="relative py-1 transition-colors hover:text-tag"
             :class="route.path === '/library' ? 'text-tag font-medium' : 'text-paper/80'"
           >
-            <span class="sm:hidden">Library</span>
-            <span class="hidden sm:inline">My Library</span>
+            My Library
             <span 
               v-if="route.path === '/library'" 
               class="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-tag"
@@ -68,38 +76,140 @@ function confirmLogout() {
         </nav>
 
         <!-- AUTH ACTION / PROFILE STATUS -->
-        <div class="border-l border-paper/20 pl-3 sm:pl-4 font-mono text-xs uppercase tracking-wider">
-          <!-- Loading State -->
+        <div class="border-l border-paper/20 pl-4 font-mono text-xs uppercase tracking-wider">
           <div v-if="authStore.isLoading" class="text-paper/40 text-[11px]">
             ...
           </div>
 
-          <!-- Logged In State -->
-          <div v-else-if="authStore.firebaseUser" class="flex items-center gap-2 sm:gap-3">
-            <span class="text-tag font-medium truncate max-w-[100px] sm:max-w-none">
+          <div v-else-if="authStore.firebaseUser" class="flex items-center gap-3">
+            <span class="text-tag font-medium truncate">
               @{{ authStore.userProfile?.nickname || 'user' }}
             </span>
             <button 
               @click="showLogoutModal = true"
-              class="text-[10px] sm:text-xs text-paper/60 hover:text-paper border border-paper/30 px-2 py-0.5 transition hover:border-paper"
+              class="text-xs text-paper/60 hover:text-paper border border-paper/30 px-2 py-0.5 transition hover:border-paper"
             >
               Out
             </button>
           </div>
 
-          <!-- Logged Out State -->
           <button 
             v-else 
             @click="authStore.loginWithGoogle"
-            class="bg-tag text-ink font-semibold px-2.5 sm:px-3 py-1 transition hover:opacity-90 active:scale-95"
+            class="bg-tag text-ink font-semibold px-3 py-1 transition hover:opacity-90 active:scale-95"
           >
             Sign In
           </button>
         </div>
       </div>
 
+      <!-- MOBILE HAMBURGER BUTTON -->
+      <button 
+        @click="isMobileMenuOpen = true"
+        type="button"
+        aria-label="Open Navigation Menu"
+        class="md:hidden p-2 text-paper/80 hover:text-tag focus:outline-none"
+      >
+        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
+        </svg>
+      </button>
+
     </div>
   </header>
+
+  <!-- MOBILE SIDEBAR OVERLAY & DRAWER -->
+  <Teleport to="body">
+    <!-- Backdrop -->
+    <Transition name="fade">
+      <div 
+        v-if="isMobileMenuOpen" 
+        @click="isMobileMenuOpen = false"
+        class="fixed inset-0 z-40 bg-ink/70 backdrop-blur-xs md:hidden"
+      ></div>
+    </Transition>
+
+    <!-- Drawer Panel -->
+    <Transition name="slide">
+      <aside 
+        v-if="isMobileMenuOpen"
+        class="fixed top-0 right-0 bottom-0 z-50 w-64 bg-ink text-paper border-l border-paper/20 p-6 flex flex-col justify-between shadow-2xl md:hidden font-mono"
+      >
+        <div class="space-y-6">
+          <!-- Drawer Header -->
+          <div class="flex items-center justify-between border-b border-paper/20 pb-4">
+            <span class="font-display text-2xl tracking-wider text-tag">Checkpoint</span>
+            <button 
+              @click="isMobileMenuOpen = false"
+              type="button"
+              class="w-8 h-8 rounded-full bg-paper/10 text-paper hover:bg-stub transition flex items-center justify-center text-xs"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- Navigation Links -->
+          <nav class="flex flex-col space-y-4 text-sm uppercase tracking-widest">
+            <router-link 
+              to="/" 
+              class="py-2 border-b border-paper/10 transition-colors flex items-center justify-between"
+              :class="route.path === '/' ? 'text-tag font-bold' : 'text-paper/80 hover:text-paper'"
+            >
+              Discover
+              <span v-if="route.path === '/'" class="w-1.5 h-1.5 rounded-full bg-tag"></span>
+            </router-link>
+
+            <router-link 
+              to="/search" 
+              class="py-2 border-b border-paper/10 transition-colors flex items-center justify-between"
+              :class="route.path === '/search' ? 'text-tag font-bold' : 'text-paper/80 hover:text-paper'"
+            >
+              Search
+              <span v-if="route.path === '/search'" class="w-1.5 h-1.5 rounded-full bg-tag"></span>
+            </router-link>
+
+            <router-link 
+              to="/library" 
+              class="py-2 border-b border-paper/10 transition-colors flex items-center justify-between"
+              :class="route.path === '/library' ? 'text-tag font-bold' : 'text-paper/80 hover:text-paper'"
+            >
+              My Library
+              <span v-if="route.path === '/library'" class="w-1.5 h-1.5 rounded-full bg-tag"></span>
+            </router-link>
+          </nav>
+        </div>
+
+        <!-- Auth / Profile Status Footer -->
+        <div class="pt-6 border-t border-paper/20">
+          <div v-if="authStore.isLoading" class="text-paper/40 text-xs">
+            Loading authentication status...
+          </div>
+
+          <div v-else-if="authStore.firebaseUser" class="space-y-3">
+            <div class="text-xs text-paper/60 uppercase">Signed in as</div>
+            <div class="text-tag font-medium truncate text-sm">
+              @{{ authStore.userProfile?.nickname || 'user' }}
+            </div>
+            <button 
+              @click="showLogoutModal = true"
+              class="w-full text-center text-xs uppercase tracking-wider text-red-300 border border-red-400/30 bg-red-950/40 hover:bg-red-900/60 py-2.5 rounded-sm transition"
+            >
+              Log Out
+            </button>
+          </div>
+
+          <button 
+            v-else 
+            @click="authStore.loginWithGoogle"
+            class="w-full bg-tag text-ink font-semibold py-2.5 text-xs uppercase tracking-wider rounded-sm transition hover:opacity-90 active:scale-95"
+          >
+            Sign In with Google
+          </button>
+        </div>
+
+      </aside>
+    </Transition>
+  </Teleport>
 
   <!-- LOGOUT CONFIRMATION POPUP -->
   <Teleport to="body">
@@ -111,7 +221,6 @@ function confirmLogout() {
       >
         <div class="bg-paper border border-ink/20 w-full max-w-sm rounded-sm shadow-2xl p-5 sm:p-6 space-y-4 relative">
           
-          <!-- Close Button -->
           <button 
             type="button"
             @click="showLogoutModal = false" 
@@ -120,7 +229,6 @@ function confirmLogout() {
             ✕
           </button>
 
-          <!-- Modal Header -->
           <div class="space-y-1">
             <h3 class="font-mono text-[11px] uppercase tracking-widest text-ink/40">
               Session Action
@@ -130,12 +238,10 @@ function confirmLogout() {
             </p>
           </div>
 
-          <!-- Modal Description -->
           <p class="text-xs sm:text-sm text-ink/80 leading-relaxed font-body">
             Are you sure you want to logout? You'll need to sign back in to access your game library and custom lists.
           </p>
 
-          <!-- Themed Action Buttons -->
           <div class="flex items-center gap-2 pt-2 font-mono text-xs uppercase tracking-wider">
             <button 
               type="button" 
@@ -161,6 +267,26 @@ function confirmLogout() {
 </template>
 
 <style scoped>
+/* Sidebar Transitions */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.25s ease-out;
+}
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(100%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Modal Transitions */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;

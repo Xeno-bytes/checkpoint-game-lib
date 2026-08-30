@@ -45,7 +45,7 @@ function handleImageError() {
 <template>
   <div 
     @click="emit('click', steamId)"
-    class="game-card group relative shrink-0 w-44 sm:w-56 md:w-64 cursor-pointer bg-ink/90 rounded-md overflow-hidden border border-ink/20 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 snap-start"
+    class="game-card group relative w-full cursor-pointer bg-ink/90 rounded-md overflow-hidden border border-ink/20 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
     :style="{ '--spine-color': statusColor }"
   >
     <!-- Accent Color Left Spine -->
