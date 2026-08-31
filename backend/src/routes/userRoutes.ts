@@ -71,7 +71,6 @@ router.post('/setup', verifyFirebaseToken, async (req: AuthenticatedRequest, res
 
     const cleanNickname = nickname.trim().toLowerCase();
 
-    // FIX: Search against 'username' instead of 'nickname' to match the User Schema
     const existingNickname = await User.findOne({ username: cleanNickname });
     if (existingNickname) {
       return res.status(400).json({ error: 'Nickname is already taken. Choose another one.' });

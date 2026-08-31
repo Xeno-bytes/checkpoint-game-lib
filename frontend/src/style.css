@@ -330,20 +330,30 @@ code {
   border-right-color: var(--border);
 }
 
-/* Low-Profile Scrollbar Track for Discover View */
-.custom-shelf-scroll::-webkit-scrollbar {
-  height: 5px;
+/* Mobile-style subtle scrollbar for PC screens */
+.shelf-scrollbar::-webkit-scrollbar {
+  height: 6px; /* Thin bar matching mobile feel */
 }
-.custom-shelf-scroll::-webkit-scrollbar-track {
-  background: rgba(30, 27, 24, 0.05);
-  border-radius: 4px;
+
+.shelf-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 9999px;
 }
-.custom-shelf-scroll::-webkit-scrollbar-thumb {
-  background: rgba(30, 27, 24, 0.25);
-  border-radius: 4px;
+
+.shelf-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
 }
-.custom-shelf-scroll::-webkit-scrollbar-thumb:hover {
-  background: #C1432E;
+
+.shelf-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Firefox Support */
+.shelf-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
 }
 
 /* Side Mask Fades */
