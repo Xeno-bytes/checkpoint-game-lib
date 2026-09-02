@@ -26,14 +26,43 @@ function confirmLogout() {
     <div class="max-w-6xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between gap-2 sm:gap-4">
       
       <!-- LOGO / BRANDING -->
-      <div class="flex items-center gap-2 sm:gap-3">
-        <router-link to="/" class="font-display text-2xl sm:text-4xl tracking-wider leading-none text-tag">
+      <div class="flex items-center gap-2.5 sm:gap-3">
+      <router-link to="/" class="flex items-center gap-2.5 group">
+        <!-- SAVE POINT CRYSTAL LOGO WITH ROTATING CRYSTAL -->
+        <svg 
+          viewBox="0 0 40 40" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg" 
+          class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 overflow-visible"
+        >
+          <!-- Save Platform / Pedestal Base (Stays Static) -->
+          <path d="M6 31L20 37L34 31L20 25L6 31Z" class="fill-ink stroke-tag" stroke-width="2" stroke-linejoin="bevel" />
+
+          <!-- Energy Beams (Glows & Pulses) -->
+          <path d="M12 31L20 5L28 31" class="stroke-tag/60 beam-pulse" stroke-width="1.5" stroke-dasharray="2 2" fill="none" />
+
+          <!-- ROTATING CRYSTAL GROUP -->
+          <g class="crystal-spinner">
+            <!-- Save Crystal Top Facet -->
+            <path d="M20 3L30 12L20 19L10 12L20 3Z" class="fill-tag" />
+            
+            <!-- Save Crystal Left Facet -->
+            <path d="M10 12L20 19V28L10 12Z" fill="#EAB308" />
+            
+            <!-- Save Crystal Right Facet -->
+            <path d="M30 12L20 19V28L30 12Z" fill="#CA8A04" />
+          </g>
+        </svg>
+
+        <span class="font-display text-2xl sm:text-4xl tracking-wider leading-none text-tag">
           Checkpoint
-        </router-link>
-        <span class="hidden md:inline-block font-mono text-[11px] uppercase tracking-[0.2em] text-paper/50 border-l border-paper/30 pl-3 py-0.5">
-          your game shelf
         </span>
-      </div>
+      </router-link>
+
+      <span class="hidden md:inline-block font-mono text-[11px] uppercase tracking-[0.2em] text-paper/50 border-l border-paper/30 pl-3 py-0.5">
+        your game shelf
+      </span>
+    </div>
 
       <!-- DESKTOP NAVIGATION & AUTH CONTROLS -->
       <div class="hidden md:flex items-center gap-6">
@@ -295,5 +324,24 @@ function confirmLogout() {
 .modal-leave-to {
   opacity: 0;
   transform: scale(0.96);
+}
+
+/* Crystal 3D Rotation Animation */
+.crystal-spinner {
+  transform-origin: 20px 15.5px; /* Centers rotation on the crystal core */
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.group:hover .crystal-spinner {
+  transform: rotateY(180deg);
+}
+
+.beam-pulse {
+  transition: opacity 0.3s ease;
+}
+
+.group:hover .beam-pulse {
+  opacity: 1;
+  stroke-dashoffset: -4;
 }
 </style>
