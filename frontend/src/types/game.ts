@@ -3,6 +3,8 @@ export interface SteamGame {
   name: string;
   tiny_image?: string;
   header_image?: string;
+  genres?: string[];
+  releaseDate?: string;
 }
 
 export interface LibraryItem {

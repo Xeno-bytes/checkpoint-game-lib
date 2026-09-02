@@ -2,6 +2,9 @@ export interface SteamSearchResult {
   id: number;
   name: string;
   tiny_image: string;
+  type?: string;
+  releaseDate?: string;
+  genres?: string[];
 }
 
 export interface GameDetails {
@@ -34,28 +37,45 @@ const gameDetailsPromises = new Map<number, Promise<GameDetails | null>>();
 // SEARCH CACHE
 const searchCache = new Map<string, { data: SteamSearchResult[]; timestamp: number }>();
 
-export async function searchSteamGames(query: string): Promise<SteamSearchResult[]> {
+export async function searchSteamGames(
+  query: string, 
+  gamesOnly = true
+): Promise<SteamSearchResult[]> {
   const trimmedQuery = query.trim().toLowerCase();
   if (!trimmedQuery) return [];
 
-  const cached = searchCache.get(trimmedQuery);
+  const cacheKey = `${trimmedQuery}_${gamesOnly}`;
+  const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
   }
 
   try {
+    // type_filter=game filters out DLCs, soundtracks, and software from Steam's API natively
+    const filterParam = gamesOnly ? '&type_filter=game' : '';
     const res = await fetch(
-      `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(trimmedQuery)}&l=english&cc=US`
+      `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(trimmedQuery)}${filterParam}&l=english&cc=US`
     );
     const data = await res.json();
-    const results = (data.items || []).map((item: any) => ({
+    
+    let rawResults = (data.items || []).map((item: any) => ({
       id: item.id,
       name: item.name,
-      tiny_image: item.tiny_image || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`
+      tiny_image: item.tiny_image || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`,
+      type: item.type || 'game'
     }));
 
-    searchCache.set(trimmedQuery, { data: results, timestamp: Date.now() });
-    return results;
+    // Client-side fallback filter to strictly purge known non-game keywords if any slip through
+    if (gamesOnly) {
+      const dlcKeywords = ['dlc', 'soundtrack', 'expansion', 'season pass', 'costume', 'pack', 'addon', 'add-on'];
+      rawResults = rawResults.filter((item: SteamSearchResult) => {
+        const lowerName = item.name.toLowerCase();
+        return !dlcKeywords.some(keyword => lowerName.includes(keyword));
+      });
+    }
+
+    searchCache.set(cacheKey, { data: rawResults, timestamp: Date.now() });
+    return rawResults;
   } catch (error) {
     console.error('Error in searchSteamGames:', error);
     return [];

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import Header from './components/Header.vue';
+import Footer from './components/Footer.vue';
 import GameModal from './components/GameModal.vue';
 import NicknameModal from './components/NicknameModal.vue';
 import type { LibraryItem } from './types/game';
@@ -103,6 +104,8 @@ function triggerToast(msg: string, isError = false) {
         @openModal="openGameModal" 
       />
     </main>
+
+    <Footer />
 
     <!-- Game Modal -->
     <GameModal 

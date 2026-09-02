@@ -48,8 +48,9 @@ export async function deleteLibraryItem(id: number, token?: string | null) {
   return res.json();
 }
 
-export async function searchGames(query: string) {
-  const res = await fetch(`${BACKEND_URL}/games/search?q=${encodeURIComponent(query)}`);
+export async function searchGames(query: string, gamesOnly = true) {
+  const url = `${BACKEND_URL}/games/search?q=${encodeURIComponent(query)}&gamesOnly=${gamesOnly}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to search games');
   return res.json();
 }

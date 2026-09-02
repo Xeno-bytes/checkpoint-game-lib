@@ -150,11 +150,13 @@ app.get('/api/games/featured', async (_req, res) => {
 app.get('/api/games/search', async (req, res) => {
   try {
     const query = (req.query.q as string) || '';
+    const gamesOnly = req.query.gamesOnly !== 'false'; // Default to true
+
     if (!query.trim()) {
       return res.json([]);
     }
 
-    const results = await searchSteamGames(query);
+    const results = await searchSteamGames(query, gamesOnly);
     res.json(results);
   } catch (err) {
     console.error('Failed to search Steam games:', err);

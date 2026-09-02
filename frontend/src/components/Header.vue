@@ -28,28 +28,20 @@ function confirmLogout() {
       <!-- LOGO / BRANDING -->
       <div class="flex items-center gap-2.5 sm:gap-3">
       <router-link to="/" class="flex items-center gap-2.5 group">
-        <!-- SAVE POINT CRYSTAL LOGO WITH ROTATING CRYSTAL -->
+        <!-- CHECKPOINT LOGO -->
         <svg 
           viewBox="0 0 40 40" 
           fill="none" 
           xmlns="http://www.w3.org/2000/svg" 
           class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 overflow-visible"
         >
-          <!-- Save Platform / Pedestal Base (Stays Static) -->
           <path d="M6 31L20 37L34 31L20 25L6 31Z" class="fill-ink stroke-tag" stroke-width="2" stroke-linejoin="bevel" />
 
-          <!-- Energy Beams (Glows & Pulses) -->
           <path d="M12 31L20 5L28 31" class="stroke-tag/60 beam-pulse" stroke-width="1.5" stroke-dasharray="2 2" fill="none" />
 
-          <!-- ROTATING CRYSTAL GROUP -->
           <g class="crystal-spinner">
-            <!-- Save Crystal Top Facet -->
             <path d="M20 3L30 12L20 19L10 12L20 3Z" class="fill-tag" />
-            
-            <!-- Save Crystal Left Facet -->
             <path d="M10 12L20 19V28L10 12Z" fill="#EAB308" />
-            
-            <!-- Save Crystal Right Facet -->
             <path d="M30 12L20 19V28L30 12Z" fill="#CA8A04" />
           </g>
         </svg>
