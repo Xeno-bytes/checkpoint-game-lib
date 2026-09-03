@@ -12,7 +12,7 @@ export interface LibraryItem {
   steam_id: number;
   name: string;
   background_image: string;
-  status: 'Backlog' | 'In Progress' | 'On Hold' | 'Completed';
+  status: 'Backlog' | 'In Progress' | 'On Hold' | 'Completed' | 'Dropped' | 'Endless';
   rating?: number;
   hoursPlayed?: number | null;
   notes?: string;

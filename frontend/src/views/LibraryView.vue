@@ -74,12 +74,14 @@ const mappedLibrary = computed<LibraryItem[]>(() => {
 
   return rawLibrary.value.map(item => {
     const appId = Number(item.appId || item.steam_id || item.steamId);
-    const title = item.name || item.title || item.gameName;
+    const title = item.name || item.title || item.gameName || '';
+
+    const isGenericFallback = /^Game\s+\d+$/i.test(title.trim());
 
     return {
       id: item._id || item.id,
       steam_id: appId,
-      name: title && !title.startsWith('Game ') ? title : `Game ${appId}`,
+      name: isGenericFallback ? (item.gameName || item.title || title || `Game ${appId}`) : title,
       background_image: item.background_image || item.icon || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
       status: reverseStatusMap[item.status] || item.status || 'Backlog',
       rating: Number(item.rating) || 0,
@@ -92,6 +94,11 @@ const mappedLibrary = computed<LibraryItem[]>(() => {
 
 const filteredLibrary = computed(() => {
   let list = [...mappedLibrary.value];
+
+  if (activeSortBy.value !== 'recent') {
+    const validRateableStatuses: string[] = ['Completed', 'Endless'];
+    list = list.filter(item => validRateableStatuses.includes(item.status as string));
+  }
 
   if (debouncedSearchQuery.value) {
     list = list.filter(item => item.name.toLowerCase().includes(debouncedSearchQuery.value));

@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import type { LibraryItem } from '../types/game';
 import { fetchLibrary } from '../api';
 import { useAuthStore } from './auth';
 
@@ -31,33 +30,45 @@ export const useLibraryStore = defineStore('library', () => {
   function saveItemLocally(savedItem: any) {
     const targetAppId = Number(savedItem.appId || savedItem.steam_id || savedItem.steamId);
 
-    // Normalize keys so mappedLibrary in LibraryView registers them correctly
-    const normalizedItem = {
-      ...savedItem,
-      appId: targetAppId,
-      steam_id: targetAppId,
-      name: savedItem.name || savedItem.title || savedItem.gameName,
-      title: savedItem.name || savedItem.title || savedItem.gameName,
-      playtimeHours: savedItem.playtimeHours ?? savedItem.hoursPlayed ?? null,
-      hoursPlayed: savedItem.playtimeHours ?? savedItem.hoursPlayed ?? null,
-      notes: savedItem.reviewContent || savedItem.notes || '',
-      reviewContent: savedItem.reviewContent || savedItem.notes || ''
-    };
-
-    const index = items.value.findIndex((i) => {
-      const id = Number(i.appId || i.steam_id || i.steamId);
-      return id === targetAppId;
+    const existingIndex = items.value.findIndex((i) => {
+        const id = Number(i.appId || i.steam_id || i.steamId);
+        return id === targetAppId;
     });
 
-    if (index !== -1) {
-      // Return a fresh array copy so Vue's reactivity system immediately fires updates
-      const updatedList = [...items.value];
-      updatedList[index] = { ...updatedList[index], ...normalizedItem };
-      items.value = updatedList;
+    const existingItem = existingIndex !== -1 ? items.value[existingIndex] : {};
+
+    const resolvedName = 
+        savedItem.name || 
+        savedItem.title || 
+        savedItem.gameName || 
+        existingItem.name || 
+        existingItem.title || 
+        existingItem.gameName;
+
+    const normalizedItem = {
+        ...existingItem,
+        ...savedItem,
+        appId: targetAppId,
+        steam_id: targetAppId,
+        steamId: targetAppId,
+        name: resolvedName,
+        title: resolvedName,
+        gameName: resolvedName,
+        rating: Number(savedItem.rating) || 0,
+        playtimeHours: savedItem.playtimeHours ?? savedItem.hoursPlayed ?? null,
+        hoursPlayed: savedItem.playtimeHours ?? savedItem.hoursPlayed ?? null,
+        reviewContent: savedItem.reviewContent || savedItem.notes || '',
+        notes: savedItem.reviewContent || savedItem.notes || ''
+    };
+
+    if (existingIndex !== -1) {
+        const updatedList = [...items.value];
+        updatedList[existingIndex] = normalizedItem;
+        items.value = updatedList;
     } else {
-      items.value = [normalizedItem, ...items.value];
+        items.value = [normalizedItem, ...items.value];
     }
-  }
+    }
 
   function removeItemLocally(itemIdOrAppId: string | number) {
     items.value = items.value.filter((i) => {

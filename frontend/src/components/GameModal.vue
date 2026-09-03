@@ -4,8 +4,10 @@ import type { LibraryItem, GameDetails } from '../types/game';
 import { fetchGameDetails, saveLibraryItem, deleteLibraryItem } from '../api';
 import GenreTag from './GenreTag.vue';
 import { useAuthStore } from '../stores/auth';
+import { useLibraryStore } from '../stores/library';
 
 const authStore = useAuthStore();
+const libraryStore = useLibraryStore();
 
 const props = defineProps<{
   steamId: number | null;
@@ -127,17 +129,23 @@ async function handleSave() {
   const rawEntry = (props.existingEntry as any) || {};
 
   // Reset metrics if the game is not in Completed or Endless status
-  const finalRating = isRateable.value ? rating.value : 0;
+  const finalRating = isRateable.value ? Number(rating.value) || 0 : 0;
   const finalHours = isRateable.value ? hoursPlayed.value : null;
   const finalNotes = isRateable.value ? review.value.trim() : '';
+
+  const gameTitle = game.value.title || props.existingEntry?.name || `Game ${props.steamId}`;
 
   const payload: Record<string, any> = {
     id: props.existingEntry?.id || rawEntry._id,
     _id: rawEntry._id || props.existingEntry?.id,
     steam_id: Number(props.steamId),
     appId: Number(props.steamId),
-    name: game.value.title,
-    background_image: game.value.icon,
+    steamId: Number(props.steamId),
+    name: gameTitle,
+    title: gameTitle,
+    gameName: gameTitle,
+    background_image: game.value.icon || rawEntry.background_image,
+    icon: game.value.icon || rawEntry.background_image,
     status: status.value,
     rating: finalRating,
     hoursPlayed: finalHours,
@@ -149,9 +157,13 @@ async function handleSave() {
   try {
     const token = await authStore.getToken();
     const saved = await saveLibraryItem(payload as any, token);
-    emit('saved', saved);
+
+    const mergedSavedItem = { ...payload, ...(saved || {}) };
+    libraryStore.saveItemLocally(mergedSavedItem);
+
+    emit('saved', mergedSavedItem as LibraryItem);
     const actionText = isExistingInLibrary.value ? 'Updated entry for' : 'Saved';
-    emit('toast', `${actionText} ${game.value.title}`);
+    emit('toast', `${actionText} ${gameTitle}`);
     emit('close');
   } catch (err) {
     formError.value = "Couldn't save. Check backend connection.";
@@ -168,6 +180,10 @@ async function handleDelete() {
   try {
     const token = await authStore.getToken();
     await deleteLibraryItem(entryId, token);
+    
+    // Remove locally from Pinia store
+    libraryStore.removeItemLocally(entryId);
+
     emit('deleted', entryId);
     emit('toast', `Removed ${game.value?.title || 'game'} from shelf`);
     emit('close');

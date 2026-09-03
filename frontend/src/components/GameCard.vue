@@ -13,6 +13,17 @@ const emit = defineEmits<{(e: 'click', id: number): void}>();
 
 const imageError = ref(false);
 
+const displayTitle = computed(() => {
+  if (!props.name) return `Game ${props.steamId}`;
+  
+  const isGeneric = new RegExp(`^Game\\s+${props.steamId}$`, 'i').test(props.name.trim());
+  if (isGeneric) {
+    return `Game ${props.steamId}`;
+  }
+  
+  return props.name;
+});
+
 const coverImage = computed(() => {
   if (!imageError.value && props.image) {
     return props.image;
@@ -22,7 +33,7 @@ const coverImage = computed(() => {
     return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${props.steamId}/header.jpg`;
   }
 
-  const initial = (props.name || '?').trim().charAt(0).toUpperCase();
+  const initial = (displayTitle.value || '?').trim().charAt(0).toUpperCase();
   return `data:image/svg+xml;utf8,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="460" height="215">
       <rect width="460" height="215" fill="#2A2421"/>
@@ -61,7 +72,7 @@ function handleImageError() {
     <div class="relative aspect-video overflow-hidden bg-ink/20">
       <img 
         :src="coverImage" 
-        :alt="name" 
+        :alt="displayTitle" 
         loading="lazy" 
         @error="handleImageError"
         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
@@ -90,7 +101,7 @@ function handleImageError() {
     <!-- Card Footer / Title Bar -->
     <div class="p-2.5 pl-3 sm:p-3 sm:pl-4 bg-paper/95 border-t border-ink/10 flex flex-col justify-center min-h-11 sm:min-h-13">
       <p class="font-mono text-[11px] sm:text-xs font-bold text-ink uppercase tracking-wide leading-tight line-clamp-1 group-hover:text-tag transition-colors">
-        {{ name }}
+        {{ displayTitle }}
       </p>
     </div>
   </div>
