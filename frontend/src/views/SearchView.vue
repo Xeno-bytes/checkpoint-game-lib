@@ -3,8 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import type { SteamGame } from '../types/game'
 import { searchGames, fetchGameDetails } from '../api'
 import GameListCard from '../components/GameListCard.vue'
+import { useLibraryStore } from '../stores/library'
 
 const emit = defineEmits<{(e: 'openModal', id: number): void}>()
+const libraryStore = useLibraryStore()
 
 // Search & Result States
 const searchQuery = ref('')
@@ -23,7 +25,8 @@ const genres = [
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  libraryStore.loadLibrary()
   handleSearch('game')
 })
 

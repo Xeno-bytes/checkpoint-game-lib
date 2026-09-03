@@ -6,7 +6,7 @@ const currentYear = new Date().getFullYear()
   <footer class="w-full bg-ink text-paper shelf-edge-top mt-auto border-t border-paper/10">
     <div class="max-w-6xl mx-auto px-4 sm:px-5 py-8 space-y-6">
       
-      <!-- TOP ROW: LOGO & TAGLINE ON THE RIGHT -->
+      <!-- LOGO & TAGLINE ON THE RIGHT -->
       <div class="flex flex-col items-end text-right space-y-1 pb-3 border-b border-paper/10">
         <div class="flex items-center gap-3">
           <span class="font-display text-3xl tracking-wider text-tag uppercase">
@@ -31,7 +31,7 @@ const currentYear = new Date().getFullYear()
         </div>
       </div>
 
-      <!-- BOTTOM ROW: ATTRIBUTION & COPYRIGHT -->
+      <!-- ATTRIBUTION & COPYRIGHT -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-[11px] text-paper/50 uppercase tracking-widest">
         <div>
           &copy; {{ currentYear }} CHECKPOINT. ALL RIGHTS RESERVED.

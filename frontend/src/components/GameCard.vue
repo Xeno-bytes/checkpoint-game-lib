@@ -34,6 +34,9 @@ const statusColor = computed(() => {
   if (props.statusChip === 'Completed') return '#2B6E6E';
   if (props.statusChip === 'In Progress') return '#E8B84B';
   if (props.statusChip === 'Backlog') return '#C1432E';
+  if (props.statusChip === 'On Hold') return '#8B7355';
+  if (props.statusChip === 'Dropped') return '#4A5568';
+  if (props.statusChip === 'Endless') return '#7C3AED';
   return '#8B7355';
 });
 

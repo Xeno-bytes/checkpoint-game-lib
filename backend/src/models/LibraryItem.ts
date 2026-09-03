@@ -3,7 +3,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 export interface ILibraryItem extends Document {
   userId: Types.ObjectId;
   appId: number;
-  status: 'Playing' | 'Completed' | 'Plan to Play' | 'Dropped';
+  status: 'Backlog' | 'In Progress' | 'On Hold' | 'Dropped' | 'Completed' | 'Endless';
   playtimeHours: number;
   rating?: number;
   reviewContent?: string;
@@ -17,8 +17,8 @@ const LibraryItemSchema = new Schema<ILibraryItem>(
     appId: { type: Number, required: true },
     status: {
       type: String,
-      enum: ['Playing', 'Completed', 'Plan to Play', 'Dropped'],
-      default: 'Plan to Play',
+      enum: ['Backlog', 'In Progress', 'On Hold', 'Dropped', 'Completed', 'Endless'],
+      default: 'Backlog',
     },
     playtimeHours: { type: Number, default: 0 },
     rating: { type: Number, min: 0, max: 5, default: null },

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import type { SteamGame, LibraryItem, GameDetails } from '../types/game';
-import { fetchFeaturedGames, fetchGameDetails, fetchLibrary } from '../api';
+import { fetchFeaturedGames, fetchGameDetails } from '../api';
 import GameCard from '../components/GameCard.vue';
 import { useAuthStore } from '../stores/auth';
+import { useLibraryStore } from '../stores/library';
 
 const emit = defineEmits<{
   (e: 'openModal', steamId: number, entry?: LibraryItem): void;
@@ -11,6 +12,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const libraryStore = useLibraryStore();
 
 // Shelves Collections
 const featured = ref<SteamGame[]>([]);
@@ -18,7 +20,27 @@ const topSellers = ref<SteamGame[]>([]);
 const newReleases = ref<SteamGame[]>([]);
 const surpriseMe = ref<SteamGame[]>([]);
 
-const userLibraryMap = ref<Map<number, LibraryItem>>(new Map());
+// Reactive map computed directly from the Pinia store
+const userLibraryMap = computed(() => {
+  const libMap = new Map<number, LibraryItem>();
+  libraryStore.items.forEach((item: any) => {
+    const appId = Number(item.appId || item.steam_id || item.steamId);
+    if (appId) {
+      const libItem: LibraryItem = {
+        id: item._id || item.id,
+        steam_id: appId,
+        name: item.name,
+        background_image: item.background_image,
+        status: item.status,
+        rating: item.rating,
+        hoursPlayed: item.playtimeHours ?? item.hoursPlayed ?? null,
+        notes: item.reviewContent || item.notes || '',
+      };
+      libMap.set(appId, libItem);
+    }
+  });
+  return libMap;
+});
 
 // Spotlight Hero State
 const spotlightCandidates = ref<GameDetails[]>([]);
@@ -94,46 +116,12 @@ async function loadSpotlightHeroBanner(relevanceGames: SteamGame[]) {
   }
 }
 
-async function loadUserLibrary(): Promise<LibraryItem[]> {
-  if (!authStore.firebaseUser) return [];
-  try {
-    const token = await authStore.getToken();
-    const items = await fetchLibrary(token);
-    const libMap = new Map<number, LibraryItem>();
-    const mappedList: LibraryItem[] = [];
-
-    items.forEach((item: any) => {
-      const appId = Number(item.appId || item.steam_id || item.steamId);
-      if (appId) {
-        const libItem: LibraryItem = {
-          id: item._id || item.id,
-          steam_id: appId,
-          name: item.name,
-          background_image: item.background_image,
-          status: item.status,
-          rating: item.rating,
-          hoursPlayed: item.playtimeHours ?? item.hoursPlayed ?? null,
-          notes: item.reviewContent || item.notes || '',
-        };
-        libMap.set(appId, libItem);
-        mappedList.push(libItem);
-      }
-    });
-
-    userLibraryMap.value = libMap;
-    return mappedList;
-  } catch (err) {
-    console.error('Failed to sync library in discover view:', err);
-    return [];
-  }
-}
-
 onMounted(async () => {
   loading.value = true;
   try {
     const [data] = await Promise.all([
       fetchFeaturedGames(),
-      loadUserLibrary()
+      libraryStore.loadLibrary()
     ]);
 
     featured.value = data.featured || [];

@@ -4,44 +4,41 @@ import { useRoute } from 'vue-router';
 import type { LibraryItem } from '../types/game';
 import GameCard from '../components/GameCard.vue';
 import { useAuthStore } from '../stores/auth';
-import { fetchLibrary, fetchPublicLibrary, fetchGameDetails } from '../api';
+import { useLibraryStore } from '../stores/library';
+import { fetchPublicLibrary, fetchGameDetails } from '../api';
 
 const route = useRoute();
 const authStore = useAuthStore();
+const libraryStore = useLibraryStore();
 
 const emit = defineEmits<{
   (e: 'openModal', steamId: number, entry?: LibraryItem): void;
 }>();
 
-const rawLibrary = ref<any[]>([]);
+const publicLibraryRaw = ref<any[]>([]);
 const loading = ref(true);
 const userNotFound = ref(false);
 const targetUsername = ref<string>('');
 
-// Filter & Search States
 const searchQuery = ref<string>('');
 const debouncedSearchQuery = ref<string>('');
 const selectedStatus = ref<string>('All');
 const activeFilterType = ref<'all' | 'has_rating' | 'no_rating' | '1_star' | '2_stars' | '3_stars' | '4_stars' | '5_stars'>('all');
 const activeSortBy = ref<'recent' | 'hours_desc' | 'hours_asc' | 'rating_desc' | 'rating_asc'>('recent');
 
-// Featured Review State
 const selectedFeaturedItem = ref<LibraryItem | null>(null);
 
-// Pagination States
 const currentPage = ref<number>(1);
 const pageInput = ref<number>(1);
 const itemsPerPage = 20;
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-// Determine if viewing own profile or visiting another user's library
 const isOwner = computed(() => {
   const routeUser = route.params.username as string | undefined;
   if (!routeUser) return true;
   
-  // Support both username and fallback nickname from auth store
-  const currentUsername =  authStore.userProfile?.nickname;
+  const currentUsername = authStore.userProfile?.nickname;
   if (!currentUsername) return false;
 
   return routeUser.toLowerCase() === currentUsername.toLowerCase();
@@ -60,21 +57,30 @@ function onSearchInput() {
   }, 500);
 }
 
+// Binds directly to Pinia store for owner, or local ref for public user profile
+const rawLibrary = computed(() => {
+  return isOwner.value ? libraryStore.items : publicLibraryRaw.value;
+});
+
 const mappedLibrary = computed<LibraryItem[]>(() => {
   const reverseStatusMap: Record<string, string> = {
     'Playing': 'In Progress',
     'Completed': 'Completed',
     'Plan to Play': 'Backlog',
-    'Dropped': 'On Hold'
+    'On Hold': 'On Hold',
+    'Dropped': 'Dropped',
+    'Endless': 'Endless'
   };
 
   return rawLibrary.value.map(item => {
     const appId = Number(item.appId || item.steam_id || item.steamId);
+    const title = item.name || item.title || item.gameName;
+
     return {
       id: item._id || item.id,
       steam_id: appId,
-      name: item.name || `Game ${appId}`,
-      background_image: item.background_image || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+      name: title && !title.startsWith('Game ') ? title : `Game ${appId}`,
+      background_image: item.background_image || item.icon || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
       status: reverseStatusMap[item.status] || item.status || 'Backlog',
       rating: Number(item.rating) || 0,
       hoursPlayed: item.playtimeHours ?? item.hoursPlayed ?? null,
@@ -142,12 +148,27 @@ function handlePageInputCommit() {
   pageInput.value = val;
 }
 
-// Convert numeric rating (e.g. 3.5) into star string representation
 function renderStars(rating: number) {
   const fullStars = Math.floor(rating);
   const hasHalf = rating % 1 >= 0.5;
   const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
   return '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(emptyStars);
+}
+
+async function hydrateMissingNames(items: any[]) {
+  return Promise.all(items.map(async (item: any) => {
+    const appId = Number(item.appId || item.steam_id || item.steamId);
+    const title = item.name || item.title || item.gameName;
+    if ((!title || title.startsWith('Game ')) && appId) {
+      try {
+        const details = await fetchGameDetails(appId);
+        if (details) {
+          return { ...item, name: details.title, background_image: details.icon };
+        }
+      } catch {}
+    }
+    return item;
+  }));
 }
 
 async function loadLibrary() {
@@ -158,36 +179,25 @@ async function loadLibrary() {
   const routeUsername = route.params.username as string | undefined;
 
   try {
-    let items = [];
     if (routeUsername && !isOwner.value) {
       targetUsername.value = routeUsername;
       const res = await fetchPublicLibrary(routeUsername);
-      items = res.library || [];
+      const raw = res.library || [];
+      publicLibraryRaw.value = await hydrateMissingNames(raw);
     } else {
-      targetUsername.value = authStore.userProfile?.nickname || authStore.userProfile?.nickname || '';
+      targetUsername.value = authStore.userProfile?.nickname || '';
       if (!authStore.firebaseUser) {
-        rawLibrary.value = [];
+        publicLibraryRaw.value = [];
         loading.value = false;
         return;
       }
-      const token = await authStore.getToken();
-      items = await fetchLibrary(token);
+      // Load Pinia Store
+      await libraryStore.loadLibrary();
+      // Hydrate missing names inside Pinia store directly
+      const hydrated = await hydrateMissingNames(libraryStore.items);
+      libraryStore.items = hydrated;
     }
 
-    rawLibrary.value = await Promise.all(items.map(async (item: any) => {
-      const appId = Number(item.appId || item.steam_id || item.steamId);
-      if ((!item.name || item.name.startsWith('Game ')) && appId) {
-        try {
-          const details = await fetchGameDetails(appId);
-          if (details) {
-            return { ...item, name: details.title, background_image: details.icon };
-          }
-        } catch {}
-      }
-      return item;
-    }));
-
-    // For public visitor mode: Pick a random game that has review notes
     if (!isOwner.value) {
       const itemsWithReviews = mappedLibrary.value.filter(
         item => item.notes && item.notes.trim().length > 0
@@ -197,12 +207,10 @@ async function loadLibrary() {
         selectedFeaturedItem.value = itemsWithReviews[randomIndex];
       }
     }
-
   } catch (err: any) {
     if (err.message === 'User not found') {
       userNotFound.value = true;
     }
-    rawLibrary.value = [];
   } finally {
     loading.value = false;
   }
@@ -212,10 +220,7 @@ function handleCardClick(item: LibraryItem) {
   if (isOwner.value && item.steam_id) {
     emit('openModal', item.steam_id, item);
   } else {
-    // Visitor Mode: Select card to feature its review
     selectedFeaturedItem.value = item;
-
-    // Smoothly scroll back to the spotlight review banner at the top
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
@@ -261,7 +266,7 @@ onMounted(loadLibrary);
         <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between pt-1 border-t border-paper/10">
           <div class="flex flex-wrap gap-1">
             <button
-              v-for="status in ['All', 'Backlog', 'In Progress', 'Completed', 'On Hold']"
+              v-for="status in ['All', 'Backlog', 'In Progress', 'Completed', 'Endless', 'On Hold', 'Dropped']"
               :key="status"
               @click="selectedStatus = status"
               :class="[
@@ -308,7 +313,7 @@ onMounted(loadLibrary);
         </div>
       </div>
 
-      <!-- FEATURED REVIEW SPOTLIGHT (Clean layout above grid for Visitors) -->
+      <!-- FEATURED REVIEW SPOTLIGHT -->
       <div 
         v-if="!isOwner && selectedFeaturedItem" 
         class="bg-ink text-paper border border-paper/20 rounded-sm p-4 sm:p-5 mb-8 shadow-xl relative overflow-hidden"
@@ -319,7 +324,6 @@ onMounted(loadLibrary);
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-          <!-- Game Image + Rating Column -->
           <div class="md:col-span-4 space-y-2">
             <div class="overflow-hidden border border-paper/20 rounded-xs aspect-video bg-black/50 shadow-md">
               <img 
@@ -334,7 +338,6 @@ onMounted(loadLibrary);
             </div>
           </div>
 
-          <!-- Review Content Column -->
           <div class="md:col-span-8 space-y-2">
             <h3 class="font-display text-xl sm:text-2xl tracking-wide text-tag uppercase leading-tight">
               {{ selectedFeaturedItem.name }}
@@ -359,7 +362,7 @@ onMounted(loadLibrary);
         <p class="uppercase font-bold">No games found on this shelf.</p>
       </div>
 
-      <!-- Clean Grid Layout -->
+      <!-- Grid Layout -->
       <div v-else class="space-y-8">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
           <GameCard

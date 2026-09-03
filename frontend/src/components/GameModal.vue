@@ -25,7 +25,7 @@ const saving = ref(false);
 const deleting = ref(false);
 const formError = ref('');
 
-const status = ref<'Backlog' | 'In Progress' | 'On Hold' | 'Completed'>('Backlog');
+const status = ref<'Backlog' | 'In Progress' | 'On Hold' | 'Dropped' | 'Completed' | 'Endless'>('Backlog');
 const rating = ref<number>(0);
 const hoverRating = ref<number | null>(null);
 const hoursPlayed = ref<number | null>(null);
@@ -36,7 +36,30 @@ const isExistingInLibrary = computed(() => {
   return !!props.existingEntry && !!props.existingEntry.status;
 });
 
-// Watch both steamId & existingEntry so form re-hydrates properly
+// Hours, Rating, and Review will ONLY show for Completed or Endless
+const isRateable = computed(() => {
+  return status.value === 'Completed' || status.value === 'Endless';
+});
+
+// Normalizes legacy DB strings like 'Playing' to frontend equivalents
+function normalizeStatus(rawStatus: string | undefined): 'Backlog' | 'In Progress' | 'On Hold' | 'Dropped' | 'Completed' | 'Endless' {
+  switch (rawStatus) {
+    case 'Playing':
+      return 'In Progress';
+    case 'Plan to Play':
+      return 'Backlog';
+    case 'Backlog':
+    case 'In Progress':
+    case 'On Hold':
+    case 'Dropped':
+    case 'Completed':
+    case 'Endless':
+      return rawStatus;
+    default:
+      return 'Backlog';
+  }
+}
+
 watch(
   () => [props.steamId, props.existingEntry] as const,
   async ([newId, newEntry]) => {
@@ -47,10 +70,10 @@ watch(
       return;
     }
 
-    // Read values with MongoDB key fallback support
     if (newEntry) {
       const raw = newEntry as Record<string, any>;
-      status.value = newEntry.status || raw.status || 'Backlog';
+      const rawStatus = newEntry.status || raw.status;
+      status.value = normalizeStatus(rawStatus);
       rating.value = Number(newEntry.rating ?? raw.rating) || 0;
       hoursPlayed.value = newEntry.hoursPlayed ?? raw.playtimeHours ?? null;
       review.value = newEntry.notes || raw.reviewContent || '';
@@ -101,10 +124,13 @@ async function handleSave() {
   saving.value = true;
   formError.value = '';
 
-  const isCompleted = status.value === 'Completed';
   const rawEntry = (props.existingEntry as any) || {};
 
-  // Payload contains both standard and MongoDB keys
+  // Reset metrics if the game is not in Completed or Endless status
+  const finalRating = isRateable.value ? rating.value : 0;
+  const finalHours = isRateable.value ? hoursPlayed.value : null;
+  const finalNotes = isRateable.value ? review.value.trim() : '';
+
   const payload: Record<string, any> = {
     id: props.existingEntry?.id || rawEntry._id,
     _id: rawEntry._id || props.existingEntry?.id,
@@ -113,11 +139,11 @@ async function handleSave() {
     name: game.value.title,
     background_image: game.value.icon,
     status: status.value,
-    rating: isCompleted ? rating.value : 0,
-    hoursPlayed: isCompleted ? hoursPlayed.value : null,
-    playtimeHours: isCompleted ? hoursPlayed.value : null,
-    notes: isCompleted ? review.value.trim() : '',
-    reviewContent: isCompleted ? review.value.trim() : '',
+    rating: finalRating,
+    hoursPlayed: finalHours,
+    playtimeHours: finalHours,
+    notes: finalNotes,
+    reviewContent: finalNotes,
   };
 
   try {
@@ -231,13 +257,15 @@ async function handleDelete() {
               <option value="Backlog">Backlog</option>
               <option value="In Progress">In Progress</option>
               <option value="On Hold">On Hold</option>
+              <option value="Dropped">Dropped</option>
+              <option value="Endless">Endless</option>
               <option value="Completed">Completed</option>
             </select>
           </div>
 
-          <!-- Fields ONLY visible when status === 'Completed' -->
-          <template v-if="status === 'Completed'">
-            <!-- Hours Played -->
+          <!-- ONLY SHOW HOURS, RATING, AND REVIEWS FOR COMPLETED OR ENDLESS -->
+          <template v-if="isRateable">
+            <!-- Hours Played Field -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Hours Played (Optional)</label>
@@ -260,7 +288,7 @@ async function handleDelete() {
               />
             </div>
 
-            <!-- Star Rating -->
+            <!-- Star Rating Field -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Game Rating (Optional)</label>
@@ -303,7 +331,7 @@ async function handleDelete() {
               </div>
             </div>
 
-            <!-- Review & Comments -->
+            <!-- Review Field -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="font-mono text-xs uppercase text-ink/60">Reviews & Comments (Optional)</label>

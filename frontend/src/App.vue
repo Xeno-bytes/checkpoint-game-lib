@@ -5,11 +5,12 @@ import Footer from './components/Footer.vue';
 import GameModal from './components/GameModal.vue';
 import NicknameModal from './components/NicknameModal.vue';
 import type { LibraryItem } from './types/game';
-import { fetchLibrary } from './api';
 import { useAuthStore } from './stores/auth';
+import { useLibraryStore } from './stores/library';
 
 const authStore = useAuthStore();
-const library = ref<LibraryItem[]>([]);
+const libraryStore = useLibraryStore();
+
 const activeModalId = ref<number | null>(null);
 const activeModalEntry = ref<LibraryItem | null>(null);
 
@@ -17,29 +18,18 @@ const toastMessage = ref('');
 const toastIsError = ref(false);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
-async function loadLibraryData() {
-  if (!authStore.firebaseUser) {
-    library.value = [];
-    return;
-  }
-
-  try {
-    const token = await authStore.getToken();
-    if (!token) return;
-    
-    library.value = await fetchLibrary(token);
-  } catch (err) {
-    console.warn('Could not load library from backend API.');
-  }
-}
-
-watch(() => authStore.firebaseUser, (user) => {
-  if (user) {
-    loadLibraryData();
-  } else {
-    library.value = [];
-  }
-}, { immediate: true });
+// Watch auth status and automatically load or clear the Pinia store
+watch(
+  () => authStore.firebaseUser,
+  (user) => {
+    if (user) {
+      libraryStore.loadLibrary();
+    } else {
+      libraryStore.items = [];
+    }
+  },
+  { immediate: true }
+);
 
 function openGameModal(steamId: number | string) {
   const idNum = Number(steamId);
@@ -47,8 +37,8 @@ function openGameModal(steamId: number | string) {
   
   activeModalId.value = idNum;
 
-  // FIX 1: Match against appId, steam_id, or steamId
-  activeModalEntry.value = library.value.find(i => {
+  // Search inside libraryStore.items instead of local state
+  activeModalEntry.value = libraryStore.items.find((i) => {
     const raw = i as any;
     const itemAppId = Number(i.steam_id || raw.appId || raw.steamId);
     return itemAppId === idNum;
@@ -56,30 +46,14 @@ function openGameModal(steamId: number | string) {
 }
 
 function handleSaved(savedItem: LibraryItem) {
-  const savedAppId = Number(savedItem.steam_id || (savedItem as any).appId);
-
-  // FIX 2: Safely update state using flexible App ID checks
-  const index = library.value.findIndex(i => {
-    const raw = i as any;
-    return Number(i.steam_id || raw.appId || raw.steamId) === savedAppId;
-  });
-
-  if (index !== -1) {
-    library.value[index] = savedItem;
-  } else {
-    library.value.push(savedItem);
-  }
-
+  // Save directly to Pinia store so LibraryView instantly updates
+  libraryStore.saveItemLocally(savedItem);
   activeModalEntry.value = savedItem;
 }
 
 function handleDeleted(id: string | number) {
-  // FIX 3: Filter against MongoDB _id, id, or appId
-  library.value = library.value.filter(i => {
-    const raw = i as any;
-    return i.id !== id && raw._id !== id && Number(i.steam_id || raw.appId) !== Number(id);
-  });
-  
+  // Delete directly from Pinia store so LibraryView instantly updates
+  libraryStore.removeItemLocally(id);
   activeModalEntry.value = null;
 }
 
@@ -99,10 +73,8 @@ function triggerToast(msg: string, isError = false) {
     <Header />
 
     <main class="max-w-6xl mx-auto px-3.5 sm:px-5 py-6 sm:py-8 w-full">
-      <router-view 
-        :library="library" 
-        @openModal="openGameModal" 
-      />
+      <!-- No longer passing local props; components use Pinia directly -->
+      <router-view @openModal="openGameModal" />
     </main>
 
     <Footer />

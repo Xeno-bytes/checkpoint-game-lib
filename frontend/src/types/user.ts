@@ -6,7 +6,7 @@ export interface UserProfile {
   createdAt: string;
 }
 
-export type GameStatus = 'Playing' | 'Completed' | 'Plan to Play' | 'Dropped';
+export type GameStatus = 'Backlog' | 'In Progress' | 'On Hold' | 'Dropped' | 'Completed' | 'Endless';
 
 export interface LibraryItem {
   id: string;

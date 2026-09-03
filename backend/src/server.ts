@@ -90,7 +90,7 @@ const handleSaveProfile = async (req: AuthenticatedRequest, res: express.Respons
         email: req.user?.email || '', 
         username: trimmedUsername 
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
     return res.status(200).json(user);
@@ -221,10 +221,12 @@ app.post('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       'In Progress': 'Playing',
       'Completed': 'Completed',
       'Backlog': 'Plan to Play',
-      'On Hold': 'Dropped',
+      'On Hold': 'On Hold',
+      'Dropped': 'Dropped',
+      'Endless': 'Endless',
     };
 
-    const mappedStatus = statusMap[status] || 'Plan to Play';
+    const mappedStatus = statusMap[status] || status || 'Plan to Play';
 
     const saved = await LibraryItem.findOneAndUpdate(
       { userId: user._id, appId: Number(steam_id) },
@@ -236,7 +238,7 @@ app.post('/api/library', verifyFirebaseToken, async (req: AuthenticatedRequest, 
         playtimeHours: hoursPlayed || 0,
         reviewContent: notes || '',
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     res.json(saved);
