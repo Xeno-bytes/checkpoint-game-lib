@@ -3,23 +3,32 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-let isConnected = false;
+let cachedPromise: Promise<typeof mongoose> | null = null;
 
 export async function connectDB() {
-  if (isConnected) return;
-
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.error('MONGODB_URI is missing from your .env file!');
+  if (mongoose.connection.readyState >= 1) {
     return;
   }
 
-  try {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('MONGODB_URI is missing from environment variables!');
+    return;
+  }
+
+  if (!cachedPromise) {
     console.log('Attempting to connect to MongoDB Atlas...');
-    await mongoose.connect(uri);
-    isConnected = mongoose.connection.readyState === 1;
+    cachedPromise = mongoose.connect(uri, {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000, 
+    });
+  }
+
+  try {
+    await cachedPromise;
     console.log('MongoDB Atlas Connected Successfully');
   } catch (error) {
+    cachedPromise = null;
     console.error('MongoDB Connection Failed:', error);
   }
 }
