@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue';
 import type { SteamGame, LibraryItem, GameDetails } from '../types/game';
 import { fetchFeaturedGames, fetchGameDetails } from '../api';
 import GameCard from '../components/GameCard.vue';
-import { useAuthStore } from '../stores/auth';
 import { useLibraryStore } from '../stores/library';
 
 const emit = defineEmits<{
@@ -11,7 +10,6 @@ const emit = defineEmits<{
   (e: 'toast', msg: string, isError?: boolean): void;
 }>();
 
-const authStore = useAuthStore();
 const libraryStore = useLibraryStore();
 
 // Shelves Collections
