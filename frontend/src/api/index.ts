@@ -1,4 +1,4 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000/api';
 
 export interface GameDetails {
   id: number;

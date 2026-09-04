@@ -14,30 +14,39 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shelfdb';
+const MONGO_URI = process.env.MONGODB_URI;
 
 if (!MONGO_URI) {
-  console.error('❌ MONGO_URI is missing in backend/.env file!');
+  console.error('❌ MONGODB_URI environment variable is missing!');
 } else {
-  mongoose
-    .connect(MONGO_URI)
-    .then(() => {
-      console.log('✅ Connected to MongoDB Atlas');
+  if (mongoose.connection.readyState === 0) {
+    mongoose
+      .connect(MONGO_URI)
+      .then(() => {
+        console.log('✅ Connected to MongoDB Atlas');
 
-      // Drop legacy index on 'nickname' if it still exists in MongoDB
-      mongoose.connection.collection('users').dropIndex('nickname_1')
-        .then(() => console.log('🗑️ Dropped stale nickname_1 index'))
-        .catch(() => {
-          // Safe to ignore if index was already removed
-        });
-    })
-    .catch((err) => console.error('MongoDB connection error:', err));
+        mongoose.connection.collection('users').dropIndex('nickname_1')
+          .then(() => console.log('🗑️ Dropped stale nickname_1 index'))
+          .catch(() => {});
+      })
+      .catch((err) => console.error('MongoDB connection error:', err));
+  }
 }
 
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 // --- USER & AUTH ROUTES ---
 
 // GET /api/users/me -> Fetch logged-in user profile
@@ -277,3 +286,5 @@ app.delete('/api/library/:id', verifyFirebaseToken, async (req: AuthenticatedReq
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+export default app;

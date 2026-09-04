@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { auth, googleProvider } from '../firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000/api';
 
 export interface MongoUser {
   _id: string;
