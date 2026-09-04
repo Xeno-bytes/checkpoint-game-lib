@@ -51,21 +51,20 @@ export async function searchSteamGames(
   }
 
   try {
-    // type_filter=game filters out DLCs, soundtracks, and software from Steam's API natively
     const filterParam = gamesOnly ? '&type_filter=game' : '';
     const res = await fetch(
       `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(trimmedQuery)}${filterParam}&l=english&cc=US`
     );
-    const data = await res.json();
+    // Cast response to dynamic object to prevent ts(18046)
+    const data = (await res.json()) as Record<string, any>;
     
-    let rawResults = (data.items || []).map((item: any) => ({
+    let rawResults = (data?.items || []).map((item: any) => ({
       id: item.id,
       name: item.name,
       tiny_image: item.tiny_image || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`,
       type: item.type || 'game'
     }));
 
-    // Client-side fallback filter to strictly purge known non-game keywords if any slip through
     if (gamesOnly) {
       const dlcKeywords = ['dlc', 'soundtrack', 'expansion', 'season pass', 'costume', 'pack', 'addon', 'add-on'];
       rawResults = rawResults.filter((item: SteamSearchResult) => {
@@ -102,11 +101,13 @@ export async function fetchGameDetails(appId: number): Promise<GameDetails | nul
   const promise = (async () => {
     try {
       const res = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`);
-      const data = await res.json();
+      // Cast the parsed JSON to a typed dictionary indexed by app ID
+      const data = (await res.json()) as Record<string, any>;
 
-      if (!data || !data[appId] || !data[appId].success) return null;
+      const appData = data?.[appId];
+      if (!appData || !appData.success) return null;
 
-      const game = data[appId].data;
+      const game = appData.data;
       const details: GameDetails = {
         id: appId,
         title: game.name,
@@ -147,8 +148,8 @@ export async function fetchFeaturedGames(): Promise<FeaturedSections> {
     try {
       const fetchStoreSection = async (extraParams: string, limit = 10): Promise<SteamSearchResult[]> => {
         const res = await fetch(`https://store.steampowered.com/api/storesearch/?${extraParams}&cc=US&l=english`);
-        const data = await res.json();
-        return (data.items || []).slice(0, limit).map((item: any) => ({
+        const data = (await res.json()) as Record<string, any>;
+        return (data?.items || []).slice(0, limit).map((item: any) => ({
           id: item.id,
           name: item.name || `App ${item.id}`,
           tiny_image: item.tiny_image || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`,
@@ -158,8 +159,8 @@ export async function fetchFeaturedGames(): Promise<FeaturedSections> {
       const relevanceSpotlight = await fetchStoreSection('term=&sort_by=_ASC', 10);
 
       const resFeatured = await fetch('https://store.steampowered.com/api/featured/?cc=US&l=english');
-      const dataFeatured = await resFeatured.json();
-      const rawFeatured = dataFeatured.featured_win || [];
+      const dataFeatured = (await resFeatured.json()) as Record<string, any>;
+      const rawFeatured = dataFeatured?.featured_win || [];
       const featured: SteamSearchResult[] = rawFeatured.slice(0, 10).map((item: any) => ({
         id: item.id,
         name: item.name || `App ${item.id}`,
