@@ -4,6 +4,7 @@ import Header from './components/Header.vue';
 import Footer from './components/Footer.vue';
 import GameModal from './components/GameModal.vue';
 import NicknameModal from './components/NicknameModal.vue';
+import SideDecorations from './components/SideDecorations.vue';
 import type { LibraryItem } from './types/game';
 import { useAuthStore } from './stores/auth';
 import { useLibraryStore } from './stores/library';
@@ -37,7 +38,6 @@ function openGameModal(steamId: number | string) {
   
   activeModalId.value = idNum;
 
-  // Search inside libraryStore.items instead of local state
   activeModalEntry.value = libraryStore.items.find((i) => {
     const raw = i as any;
     const itemAppId = Number(i.steam_id || raw.appId || raw.steamId);
@@ -46,13 +46,11 @@ function openGameModal(steamId: number | string) {
 }
 
 function handleSaved(savedItem: LibraryItem) {
-  // Save directly to Pinia store so LibraryView instantly updates
   libraryStore.saveItemLocally(savedItem);
   activeModalEntry.value = savedItem;
 }
 
 function handleDeleted(id: string | number) {
-  // Delete directly from Pinia store so LibraryView instantly updates
   libraryStore.removeItemLocally(id);
   activeModalEntry.value = null;
 }
@@ -69,11 +67,13 @@ function triggerToast(msg: string, isError = false) {
 </script>
 
 <template>
-  <div id="app" class="font-body text-ink min-h-screen relative w-full overflow-x-hidden">
+  <div id="app" class="font-body text-ink min-h-screen relative w-full overflow-x-hidden flex flex-col justify-between">
+    <!-- Side Decorative Art Component (Scrolls with page) -->
+    <SideDecorations />
+
     <Header />
 
-    <main class="max-w-6xl mx-auto px-3.5 sm:px-5 py-6 sm:py-8 w-full">
-      <!-- No longer passing local props; components use Pinia directly -->
+    <main class="max-w-6xl mx-auto px-3.5 sm:px-5 py-6 sm:py-8 w-full z-10 flex-1">
       <router-view @openModal="openGameModal" />
     </main>
 
