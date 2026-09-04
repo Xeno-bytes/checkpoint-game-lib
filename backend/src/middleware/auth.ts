@@ -10,11 +10,15 @@ function initFirebase() {
   try {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+
       initializeApp({
         credential: cert(serviceAccount),
       });
-      console.log('✅ Firebase Admin initialized via environment variable');
-      return;
+      console.log('✅ Firebase Admin initialized successfully');
     }
 
     const localKeyPath = path.resolve(process.cwd(), 'firebase-service-account.json');

@@ -47,6 +47,12 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
+
+// --- TEST ROUTE ---
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Checkpoint API running smoothly' });
+});
+
 // --- USER & AUTH ROUTES ---
 
 // GET /api/users/me -> Fetch logged-in user profile
@@ -143,6 +149,7 @@ app.get('/api/users/profile/:username', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch public library' });
   }
 });
+
 
 // --- GAMES ROUTES ---
 
